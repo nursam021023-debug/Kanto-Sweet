@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Profile</title>
+    <link rel="stylesheet" href="profile-seller.css">
+    <style>
+        /* ── Store Photos Carousel ── */
+        .section-card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid #e4e9f4;
+            padding: 16px 18px;
+            margin: 14px 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        }
+        .section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 12px;
+        }
+
+        /* Carousel */
+        .carousel-wrap {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 10px;
+            background: #f0f2f8;
+            min-height: 180px;
+        }
+        .carousel-track {
+            display: flex;
+            transition: transform 0.35s ease;
+        }
+        .carousel-slide {
+            min-width: 100%;
+            position: relative;
+        }
+        .carousel-slide img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            display: block;
+        }
+        .carousel-remove {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .carousel-remove:hover { background: rgba(220,53,69,0.85); }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.45);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: background 0.2s;
+        }
+        .carousel-btn:hover { background: rgba(0,0,0,0.7); }
+        .carousel-btn.prev { left: 8px; }
+        .carousel-btn.next { right: 8px; }
+
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .carousel-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #c8cfe0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .carousel-dot.active { background: #1a1a2e; }
+
+        .carousel-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 160px;
+            color: #aaa;
+            font-size: 13px;
+            gap: 8px;
+        }
+
+        /* Upload button */
+        .upload-photo-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 10px;
+            background: #f4f6fb;
+            border: 1.5px dashed #b0b8d1;
+            border-radius: 9px;
+            padding: 9px 16px;
+            font-size: 13px;
+            color: #5a7fc1;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .upload-photo-btn:hover { border-color: #5a7fc1; background: #eaf0fb; }
+
+        /* ── Location ── */
+        .location-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .location-row input {
+            flex: 1;
+            min-width: 160px;
+            padding: 9px 13px;
+            border: 1.5px solid #d0d7e8;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .location-row input:focus { border-color: #5a7fc1; }
+        .gps-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 13px;
+            background: #1a1a2e;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+        .gps-btn:hover { opacity: 0.82; }
+        .gps-status { font-size: 12px; color: #888; margin-top: 4px; }
+        .gps-hint {
+            font-size: 11.5px; color: #999; margin-top: 4px; line-height: 1.4;
+        }
+        .map-frame {
+            width: 100%;
+            height: 200px;
+            border-radius: 10px;
+            border: 1px solid #d0d7e8;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="window.location.href='homeseller.html'">&#8592; Back</button>
+
+    <!-- BANNER -->
+    <div class="banner" id="banner">
+        <div class="banner-bg" id="bannerBg"></div>
+        <div class="banner-overlay"></div>
+        <label class="edit-logo-btn" title="Change Photo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Change Photo
+            <input type="file" id="logoUpload" accept="image/*" style="display:none;">
+        </label>
+        <img class="banner-logo" id="storeLogo" src="" alt="Store Logo">
+        <div class="banner-info">
+            <div class="editable-row">
+                <h1 id="storeName">Shop Name</h1>
+                <span class="edit-link" onclick="editField('storeName','Shop Name')">Edit</span>
+            </div>
+            <div class="editable-row">
+                <p id="storeMotto">Motto</p>
+                <span class="edit-link" onclick="editField('storeMotto','Motto')">Edit</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFO CARD -->
+    <div class="info-card">
+        <div class="info-row"><span><strong>Owner of Shop:</strong> <span id="ownerName">—</span></span><span class="edit-link" onclick="editField('ownerName','Owner Name')">Edit</span></div>
+        <div class="info-row"><span><strong>Phone Number:</strong> <span id="phoneNumber">—</span></span><span class="edit-link" onclick="editField('phoneNumber','Phone Number')">Edit</span></div>
+        <div class="info-row"><span><strong>GCash Number:</strong> <span id="gcashNumber">—</span></span><span class="edit-link" onclick="editField('gcashNumber','GCash Number')">Edit</span></div>
+        <div class="info-row">
+            <span><strong>Social Media:</strong> <a id="facebookLink" href="#" target="_blank">Facebook link</a> &nbsp; <a id="instagramLink" href="#" target="_blank">Instagram Link</a></span>
+            <span class="edit-link" onclick="editSocials()">Edit</span>
+        </div>
+        <div class="about-section">
+            <h2>About the Shop:</h2>
+            <p id="aboutShop" class="about-text">—</p>
+            <span class="edit-link" onclick="editField('aboutShop','About the Shop')">Edit</span>
+        </div>
+    </div>
+
+    <!-- STORE PHOTOS CAROUSEL -->
+    <div class="section-card">
+        <div class="section-title">📸 Store Photos</div>
+
+        <div class="carousel-wrap" id="carouselWrap">
+            <div class="carousel-track" id="carouselTrack">
+                <!-- slides injected here -->
+            </div>
+            <button class="carousel-btn prev" id="prevBtn" onclick="slideCarousel(-1)" style="display:none;">&#8249;</button>
+            <button class="carousel-btn next" id="nextBtn" onclick="slideCarousel(1)"  style="display:none;">&#8250;</button>
+            <div class="carousel-empty" id="carouselEmpty">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                No store photos yet
+            </div>
+        </div>
+
+        <div class="carousel-dots" id="carouselDots"></div>
+
+        <label class="upload-photo-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload Store Photo(s)
+            <input type="file" id="storePhotoUpload" accept="image/*" multiple style="display:none;">
+        </label>
+        <p style="font-size:11px;color:#aaa;margin-top:6px;">You can upload multiple photos. They appear in a swipeable carousel.</p>
+    </div>
+
+    <!-- LOCATION -->
+    <div class="section-card">
+        <div class="section-title">📍 Store Location</div>
+
+        <div class="location-row">
+            <input type="text" id="locationInput" placeholder="e.g. Marmaram Beach Resort, Purok 5 Lipay Dingin, Iba, Zambales">
+            <button class="gps-btn" onclick="useGPS()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+                Use GPS
+            </button>
+        </div>
+        <p class="gps-status" id="gpsStatus"></p>
+        <p class="gps-hint">
+            "Use GPS" only fills in a <em>suggested</em> address based on your coordinates — nearby roads/zones may not
+            match your exact spot (e.g. a resort name or purok/sitio). Please edit the text above so it's exact;
+            your pinpointed GPS location is still saved separately for accurate rider directions.
+        </p>
+        <iframe class="map-frame" id="mapFrame" allowfullscreen loading="lazy"></iframe>
+    </div>
+
+    <div class="save-wrap">
+        <button class="save-btn" onclick="saveProfile()">Save Profile</button>
+    </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, query, where, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// Firebase Storage removed — using base64 (free plan compatible)
+
+const firebaseConfig = { apiKey:"AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",authDomain:"dalocal-8ceb3.firebaseapp.com",projectId:"dalocal-8ceb3",storageBucket:"dalocal-8ceb3.appspot.com",messagingSenderId:"737186112999",appId:"1:737186112999:web:f61d20523f4ac479f8c942" };
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+
+const currentSeller = localStorage.getItem("currentSeller");
+if(!currentSeller){ alert("Please login first."); window.location.href = "seller login.html"; }
+
+let profileData  = {};
+let storePhotos  = []; // array of { url, storagePath }
+let carouselIdx  = 0;
+
+// Precise GPS coordinates captured via "Use GPS" (or previously saved).
+// Kept SEPARATE from the visible location text so riders can still get
+// accurate map directions even after the seller edits the address text
+// to something more exact/readable than what reverse-geocoding guessed
+// (e.g. adding "Marmaram Beach Resort, Purok 5" which OpenStreetMap has
+// no record of and could never generate on its own).
+let storeLat = null;
+let storeLng = null;
+
+// ── LOAD ──────────────────────────────────────────────
+(async () => {
+    // Step 1: Load seller base data (profile pic + shopName + phone as fallback)
+    const sSnap = await getDocs(query(collection(db,"sellers"), where("username","==",currentSeller)));
+    let sellerDoc = {};
+    if(!sSnap.empty){
+        sellerDoc = sSnap.docs[0].data();
+        if(sellerDoc.profilePic){
+            document.getElementById("storeLogo").src = sellerDoc.profilePic;
+            document.getElementById("bannerBg").style.backgroundImage = `url('${sellerDoc.profilePic}')`;
+        }
+        // Use shopName from sellers collection as the default — this prevents "Shop Name" showing
+        if(sellerDoc.shopName){
+            document.getElementById("storeName").innerText = sellerDoc.shopName;
+        }
+        // Use the contact number entered at registration as the default —
+        // sellerProfiles.phoneNumber (Step 2 below) will override this if
+        // the seller has since edited it from this page.
+        if(sellerDoc.phone){
+            document.getElementById("phoneNumber").innerText = sellerDoc.phone;
+        }
+    }
+
+    // Step 2: Load detailed profile (overrides defaults if saved)
+    const pSnap = await getDocs(query(collection(db,"sellerProfiles"), where("username","==",currentSeller)));
+    if(!pSnap.empty){
+        profileData = pSnap.docs[0].data();
+
+        // Always set fields — use current element value as fallback so nothing blanks out
+        const setField = (id, val) => {
+            document.getElementById(id).innerText = val || document.getElementById(id).innerText;
+        };
+        setField("storeName",  profileData.storeName);
+        setField("storeMotto", profileData.storeMotto);
+        setField("ownerName",  profileData.ownerName);
+        setField("phoneNumber",profileData.phoneNumber);
+        setField("gcashNumber",profileData.gcashNumber);
+        setField("aboutShop",  profileData.aboutShop);
+
+        if(profileData.facebookLink && profileData.facebookLink !== "Facebook link"){
+            document.getElementById("facebookLink").href      = profileData.facebookLink;
+            document.getElementById("facebookLink").innerText = profileData.facebookLink;
+        }
+        if(profileData.instagramLink && profileData.instagramLink !== "Instagram Link"){
+            document.getElementById("instagramLink").href      = profileData.instagramLink;
+            document.getElementById("instagramLink").innerText = profileData.instagramLink;
+        }
+        // Store photos carousel
+        if(profileData.storePhotos && profileData.storePhotos.length > 0){
+            storePhotos = profileData.storePhotos;
+            renderCarousel();
+        }
+        // Location — text + (if previously captured) the precise coordinates
+        if(profileData.location){
+            document.getElementById("locationInput").value = profileData.location;
+            showMap(profileData.location);
+        }
+        if(profileData.locationLat != null && profileData.locationLng != null){
+            storeLat = profileData.locationLat;
+            storeLng = profileData.locationLng;
+        }
+    }
+})();
+
+// ── BANNER PHOTO ──────────────────────────────────────
+document.getElementById("logoUpload").addEventListener("change", async function(){
+    const file = this.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e){
+        // Store logo saved as base64 directly
+        const url = e.target.result;
+        document.getElementById("storeLogo").src = url;
+        document.getElementById("bannerBg").style.backgroundImage = `url('${url}')`;
+        const sSnap = await getDocs(query(collection(db,"sellers"), where("username","==",currentSeller)));
+        if(!sSnap.empty) await setDoc(sSnap.docs[0].ref, { profilePic: url }, { merge:true });
+        await setDoc(doc(db,"stores",currentSeller), { photo: url }, { merge:true });
+    };
+    reader.readAsDataURL(file);
+});
+
+// ── STORE PHOTOS UPLOAD ───────────────────────────────
+// Compress a photo to base64 (no Firebase Storage needed)
+function compressPhoto(file) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load failed")); };
+        img.onload  = () => {
+            URL.revokeObjectURL(url);
+            const canvas = document.createElement("canvas");
+            let w = img.width, h = img.height, maxDim = 800;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else       { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            let quality = 0.78, dataUrl = canvas.toDataURL("image/jpeg", quality);
+            while (dataUrl.length > 200 * 1024 * 1.37 && quality > 0.15) {
+                quality -= 0.08;
+                dataUrl = canvas.toDataURL("image/jpeg", quality);
+            }
+            resolve(dataUrl);
+        };
+        img.src = url;
+    });
+}
+
+document.getElementById("storePhotoUpload").addEventListener("change", async function(){
+    const files = Array.from(this.files);
+    if(!files.length) return;
+    document.getElementById("gpsStatus").innerText = "Compressing photos...";
+    for(const file of files){
+        try {
+            const dataUrl = await compressPhoto(file);
+            storePhotos.push({ url: dataUrl });
+        } catch(e) { console.error("Photo compress failed:", e); }
+    }
+    this.value = "";
+    document.getElementById("gpsStatus").innerText = "";
+    renderCarousel();
+});
+
+// ── CAROUSEL ──────────────────────────────────────────
+function renderCarousel(){
+    const track  = document.getElementById("carouselTrack");
+    const dots   = document.getElementById("carouselDots");
+    const empty  = document.getElementById("carouselEmpty");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    track.innerHTML = "";
+    dots.innerHTML  = "";
+
+    if(storePhotos.length === 0){
+        empty.style.display  = "flex";
+        prevBtn.style.display = "none";
+        nextBtn.style.display = "none";
+        return;
+    }
+
+    empty.style.display  = "none";
+    prevBtn.style.display = storePhotos.length > 1 ? "flex" : "none";
+    nextBtn.style.display = storePhotos.length > 1 ? "flex" : "none";
+
+    storePhotos.forEach((p, i) => {
+        const slide = document.createElement("div");
+        slide.className = "carousel-slide";
+        slide.innerHTML = `
+            <img src="${p.url}" alt="Store photo ${i+1}">
+            <button class="carousel-remove" onclick="removePhoto(${i})" title="Remove">✕</button>`;
+        track.appendChild(slide);
+
+        const dot = document.createElement("div");
+        dot.className = "carousel-dot" + (i === carouselIdx ? " active" : "");
+        dot.onclick = () => goToSlide(i);
+        dots.appendChild(dot);
+    });
+
+    goToSlide(Math.min(carouselIdx, storePhotos.length - 1));
+}
+
+function goToSlide(idx){
+    carouselIdx = idx;
+    document.getElementById("carouselTrack").style.transform = `translateX(-${idx * 100}%)`;
+    document.querySelectorAll(".carousel-dot").forEach((d, i) => d.classList.toggle("active", i === idx));
+}
+
+window.slideCarousel = function(dir){
+    const total = storePhotos.length;
+    if(!total) return;
+    goToSlide((carouselIdx + dir + total) % total);
+};
+
+window.removePhoto = function(idx){
+    if(!confirm("Remove this photo?")) return;
+    storePhotos.splice(idx, 1);
+    carouselIdx = Math.max(0, carouselIdx - 1);
+    renderCarousel();
+};
+
+// Touch/swipe support
+let touchStartX = 0;
+document.getElementById("carouselWrap").addEventListener("touchstart", e => { touchStartX = e.touches[0].clientX; });
+document.getElementById("carouselWrap").addEventListener("touchend", e => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if(Math.abs(diff) > 40) slideCarousel(diff > 0 ? 1 : -1);
+});
+
+// ── LOCATION ──────────────────────────────────────────
+//
+// "Use GPS" captures precise coordinates (stored in storeLat/storeLng —
+// these are what riders will use for accurate map directions), then tries
+// to pre-fill the text box with a suggested address via free reverse
+// geocoding (OpenStreetMap Nominatim). That suggestion can be wrong or
+// incomplete in areas with sparse map data — e.g. it might land on the
+// nearest named road/zone instead of an actual resort/business name — so
+// the seller is expected to review and correct the text before saving.
+// The text field is what riders actually see as "Pickup at:", so its
+// accuracy is entirely in the seller's hands, not the geocoder's.
+
+async function reverseGeocodeSuggestion(lat, lng) {
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=0`);
+        const data = await res.json();
+        return (data && data.display_name) ? data.display_name : null;
+    } catch (e) {
+        console.warn("Reverse geocode suggestion failed:", e);
+        return null;
+    }
+}
+
+window.useGPS = function(){
+    const status = document.getElementById("gpsStatus");
+    status.innerText = "Getting your location...";
+    if(!navigator.geolocation){ status.innerText = "GPS not supported on this device."; return; }
+    navigator.geolocation.getCurrentPosition(
+        async pos => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            storeLat = lat;
+            storeLng = lng;
+
+            status.innerText = "📍 Location pinned! Looking up a suggested address…";
+            const coordsText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            showMap(coordsText);
+
+            const suggestion = await reverseGeocodeSuggestion(lat, lng);
+            const input = document.getElementById("locationInput");
+            input.value = suggestion || coordsText;
+            input.focus();
+            // Put the cursor at the very front so it's easy for the seller
+            // to type a business/landmark name (e.g. "Marmaram Beach
+            // Resort, ") right before the suggested address.
+            input.setSelectionRange(0, 0);
+
+            status.innerText = suggestion
+                ? "✓ GPS pinned — please check/edit the suggested address below so it's exact."
+                : "✓ GPS pinned — couldn't find a suggested address, please type it in manually.";
+        },
+        err => { status.innerText = "Could not get location. Please type it manually."; }
+    );
+};
+
+document.getElementById("locationInput").addEventListener("input", function(){
+    const val = this.value.trim();
+    if(val.length > 4) showMap(val);
+});
+
+function showMap(query){
+    const frame = document.getElementById("mapFrame");
+    const encoded = encodeURIComponent(query);
+    frame.src = `https://maps.google.com/maps?q=${encoded}&output=embed&z=15`;
+    frame.style.display = "block";
+}
+
+// ── EDIT HELPERS ──────────────────────────────────────
+window.editField = async function(id, label){
+    const cur = document.getElementById(id).innerText;
+    const nv  = prompt("Edit " + label + ":", cur === "—" ? "" : cur);
+    if(nv !== null && nv.trim() !== ""){
+        document.getElementById(id).innerText = nv.trim();
+        await autoSaveProfileField(id, nv.trim());
+    }
+};
+
+// Persist a single field to sellerProfiles/{username} right away, so edits
+// (like the store motto) are saved even if the seller never taps
+// "Save Profile" before logging out.
+async function autoSaveProfileField(fieldId, value){
+    try {
+        await setDoc(doc(db,"sellerProfiles",currentSeller), {
+            username: currentSeller,
+            [fieldId]: value
+        }, { merge:true });
+    } catch(e){
+        console.error("Auto-save failed for " + fieldId + ":", e);
+    }
+}
+window.editSocials = function(){
+    const fb = prompt("Facebook link:", document.getElementById("facebookLink").innerText);
+    if(fb !== null){ document.getElementById("facebookLink").href = fb.trim()||"#"; document.getElementById("facebookLink").innerText = fb.trim()||"Facebook link"; }
+    const ig = prompt("Instagram link:", document.getElementById("instagramLink").innerText);
+    if(ig !== null){ document.getElementById("instagramLink").href = ig.trim()||"#"; document.getElementById("instagramLink").innerText = ig.trim()||"Instagram Link"; }
+};
+
+// ── SAVE ──────────────────────────────────────────────
+window.saveProfile = async function(){
+    const location  = document.getElementById("locationInput").value.trim();
+    const storeName = document.getElementById("storeName").innerText.trim();
+    const p = {
+        username:      currentSeller,
+        storeName,
+        storeMotto:    document.getElementById("storeMotto").innerText,
+        ownerName:     document.getElementById("ownerName").innerText,
+        phoneNumber:   document.getElementById("phoneNumber").innerText,
+        gcashNumber:   document.getElementById("gcashNumber").innerText,
+        aboutShop:     document.getElementById("aboutShop").innerText,
+        facebookLink:  document.getElementById("facebookLink").innerText,
+        instagramLink: document.getElementById("instagramLink").innerText,
+        storePhotos,
+        location,
+        locationLat: storeLat,
+        locationLng: storeLng,
+    };
+
+    // 1. Save full profile to sellerProfiles/{username}
+    await setDoc(doc(db,"sellerProfiles",currentSeller), p, { merge:true });
+
+    // 2. Find seller UID and update stores/{uid} + sellers/{uid} so shop.html
+    //    (and rider-dashboard.html's pickup-location lookup, which reads
+    //    stores/{uid}.location + .locationLat/.locationLng) shows updated info
+    try {
+        const sSnap = await getDocs(query(collection(db,"sellers"), where("username","==",currentSeller)));
+        if (!sSnap.empty) {
+            const sellerUID = sSnap.docs[0].id;
+            const currentPic = document.getElementById("storeLogo").src;
+            await setDoc(doc(db,"stores",sellerUID), {
+                name:     storeName,
+                location,
+                locationLat: storeLat,
+                locationLng: storeLng,
+                seller:   currentSeller,
+                photo:    currentPic.startsWith("data:") ? currentPic : sSnap.docs[0].data().profilePic || ""
+            }, { merge:true });
+            await setDoc(doc(db,"sellers",sellerUID), {
+                shopName: storeName
+            }, { merge:true });
+        }
+    } catch(e) { console.error("Store update failed:", e); }
+
+    alert("Profile saved! Your shop page is now updated.");
+};
+</script>
+</body>
+</html>

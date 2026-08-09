@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages - Rider</title>
+<link rel="stylesheet" href="messages.css">
+</head>
+<body>
+
+<div class="app">
+
+    <!-- HEADER -->
+    <div class="top-bar">
+        <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+        <h2>Messages</h2>
+        <span id="rider-label"></span>
+    </div>
+
+    <div class="main" id="main">
+
+        <!-- SIDEBAR: customer conversation list -->
+        <div class="sidebar">
+            <div class="sidebar-header">Customers</div>
+            <div id="contact-list"><div class="empty-sidebar">Loading conversations...</div></div>
+        </div>
+
+        <!-- CHAT AREA -->
+        <div class="chat-area" id="chat-area">
+            <div class="no-chat">Select a conversation to start chatting</div>
+        </div>
+
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+    getFirestore, collection, query, where,
+    onSnapshot, addDoc, doc, getDoc, updateDoc, serverTimestamp, increment
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",
+    authDomain: "dalocal-8ceb3.firebaseapp.com",
+    projectId: "dalocal-8ceb3",
+    storageBucket: "dalocal-8ceb3.appspot.com",
+    messagingSenderId: "737186112999",
+    appId: "1:737186112999:web:f61d20523f4ac479f8c942"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+const currentRider    = localStorage.getItem("currentRider");
+const currentRiderUID = localStorage.getItem("currentRiderUID") || "";
+
+if (!currentRider || !currentRiderUID) {
+    alert("Please login first.");
+    window.location.href = "login.html";
+    throw new Error("stop");
+}
+
+document.getElementById("rider-label").innerText = currentRider;
+
+let _conversations = [];   // chats where riderUID == currentRiderUID
+let _activeChatId  = null;
+let _activeMsgs    = [];   // last known messages for the open chat (used to re-render on unread changes)
+let _unsubMessages = null;
+let _customerPicCache = {}; // customerUID -> profilePic data URL (or null if none/not found)
+let _orderNameCache = {};   // chatId (== orderId) -> item name from orders/{orderId}.name
+
+// ── Fetch + cache a customer's profile picture (customers/{uid}.profilePic) ──
+async function fetchCustomerPic(uid) {
+    if (!uid) return null;
+    if (_customerPicCache[uid] !== undefined) return _customerPicCache[uid];
+    try {
+        const snap = await getDoc(doc(db, "customers", uid));
+        const pic = snap.exists() ? (snap.data().profilePic || null) : null;
+        _customerPicCache[uid] = pic;
+        return pic;
+    } catch (e) {
+        _customerPicCache[uid] = null;
+        return null;
+    }
+}
+
+// ── Fetch + cache the item name straight from orders/{orderId}.name ────────
+// NOTE: chatId is always the same as orderId (see getOrCreateChatForOrder()
+// in db.js), so we can look the order up directly. This is more reliable
+// than the chat doc's own "orderName" field, which can be stale/wrong for
+// conversations created before that field was fixed to use order.name.
+async function fetchOrderName(chatId) {
+    if (!chatId) return "";
+    if (_orderNameCache[chatId] !== undefined) return _orderNameCache[chatId];
+    try {
+        const snap = await getDoc(doc(db, "orders", chatId));
+        const name = snap.exists() ? (snap.data().name || "") : "";
+        _orderNameCache[chatId] = name;
+        return name;
+    } catch (e) {
+        _orderNameCache[chatId] = "";
+        return "";
+    }
+}
+
+// Builds an <div class="avatar"> that shows the real photo when we have one,
+// falling back to initials otherwise. Optional inline size override for the
+// smaller chat-header avatar (sidebar uses the default 36px from messages.css).
+function avatarHtml(pic, name, cls, sizePx) {
+    const sizeStyle = sizePx ? `width:${sizePx}px;height:${sizePx}px;` : "";
+    if (pic) {
+        return `<div class="avatar ${cls}" style="${sizeStyle}overflow:hidden;padding:0"><img src="${pic}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>`;
+    }
+    return `<div class="avatar ${cls}" style="${sizeStyle}">${initials(name)}</div>`;
+}
+
+// ── Subscribe to this rider's conversation list ─────────────────────────────
+// NOTE: intentionally NO orderBy() here. where("riderUID","==",...) combined
+// with orderBy("updatedAt","desc") needs a Firestore composite index — if
+// that index doesn't exist yet, onSnapshot's error callback fires and this
+// page shows "Could not load messages." even though the data itself is
+// fine. We sort client-side instead (see renderSidebar) so this works
+// immediately with zero Firestore console setup.
+const convQuery = query(
+    collection(db, "chats"),
+    where("riderUID", "==", currentRiderUID)
+);
+onSnapshot(convQuery, async (snap) => {
+    _conversations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Pre-fetch (and cache) each customer's profile pic + the real order
+    // item name before rendering, so avatars/labels don't flicker after.
+    await Promise.all([
+        ..._conversations.map(c => fetchCustomerPic(c.customerUID)),
+        ..._conversations.map(c => fetchOrderName(c.id))
+    ]);
+    renderSidebar();
+    if (_activeChatId) {
+        updateChatHeader();
+        renderMessages(); // refresh "Seen" state now that unreadCustomer may have changed
+    }
+}, (err) => {
+    console.error("Failed to load conversations:", err);
+    document.getElementById("contact-list").innerHTML =
+        `<div class="empty-sidebar">Could not load messages.</div>`;
+});
+
+function initials(name) {
+    return (name || "?").trim().charAt(0).toUpperCase();
+}
+
+function formatTime(ts) {
+    if (!ts || !ts.seconds) return "";
+    const d = new Date(ts.seconds * 1000);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    return sameDay
+        ? d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" })
+        : d.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+}
+
+function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.innerText = str || "";
+    return d.innerHTML;
+}
+
+function activeChat() {
+    return _conversations.find(c => c.id === _activeChatId) || null;
+}
+
+// ── Render sidebar (conversation list) ──────────────────────────────────────
+function renderSidebar() {
+    const list = document.getElementById("contact-list");
+
+    if (_conversations.length === 0) {
+        list.innerHTML = `<div class="empty-sidebar">No conversations yet</div>`;
+        return;
+    }
+
+    // Sort newest-first here in JS (replaces the removed Firestore orderBy)
+    const convs = [..._conversations].sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
+
+    list.innerHTML = convs.map(c => {
+        const unread = c.unreadRider || 0;
+        const itemName = _orderNameCache[c.id];
+        return `
+        <div class="contact ${c.id === _activeChatId ? 'active' : ''}" onclick="openChatProxy('${c.id}')">
+            ${avatarHtml(_customerPicCache[c.customerUID], c.customerUsername, 'av-customer')}
+            <div class="contact-info">
+                <div class="contact-name">${c.customerUsername || 'Customer'}</div>
+                <div class="contact-preview">${c.lastMessage ? escapeHtml(c.lastMessage) : (itemName ? 'Order: ' + itemName : 'No messages yet')}</div>
+            </div>
+            ${unread > 0 ? `<span class="unread">${unread > 99 ? '99+' : unread}</span>` : ''}
+        </div>`;
+    }).join("");
+}
+
+// ── Open a chat thread ──────────────────────────────────────────────────────
+window.openChatProxy = async function (chatId) {
+    _activeChatId = chatId;
+    document.getElementById("main").classList.add("chat-open");
+    renderSidebar();
+
+    const chat = activeChat();
+    const pic  = await fetchCustomerPic(chat?.customerUID);
+    const itemName = await fetchOrderName(chatId);
+    const chatArea = document.getElementById("chat-area");
+
+    chatArea.innerHTML = `
+        <div class="chat-header">
+            <button class="chat-back-btn" onclick="closeChatProxy()" title="Back to customers">&#8592;</button>
+            ${avatarHtml(pic, chat?.customerUsername, 'av-customer', 28)}
+            <div>
+                <div class="chat-header-name" id="chatHeaderName">${chat?.customerUsername || 'Customer'}</div>
+                <div class="chat-header-status" id="chatHeaderOrder">${itemName ? 'Order: ' + itemName : 'Customer'}</div>
+            </div>
+        </div>
+        <div class="messages" id="msg-list"><div style="text-align:center;padding:20px;opacity:.5">Loading…</div></div>
+        <div class="input-area">
+            <textarea class="msg-input" id="msg-input" placeholder="Type a message..." onkeydown="handleKeyProxy(event)"></textarea>
+            <button class="send-btn" id="send-btn">Send</button>
+        </div>
+    `;
+    document.getElementById("send-btn").onclick = sendMsg;
+
+    // Mark this conversation as read for the rider — this is what clears
+    // the badge count back on the Rider Home page.
+    if (chat && (chat.unreadRider || 0) > 0) {
+        updateDoc(doc(db, "chats", chatId), { unreadRider: 0 })
+            .catch((e) => console.error("Failed to clear unread count:", e));
+    }
+
+    if (_unsubMessages) _unsubMessages();
+    // NOTE: this messages sub-collection query has no orderBy in the query
+    // itself (sorted client-side instead) because it's a filter-free query,
+    // so it does NOT need a composite index — safe to leave as-is.
+    const msgsQuery = query(collection(db, "chats", chatId, "messages"));
+    _unsubMessages = onSnapshot(msgsQuery, (snap) => {
+        _activeMsgs = snap.docs.map(d => d.data())
+            .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+        renderMessages();
+    }, (err) => console.error("Failed to load messages:", err));
+};
+
+function updateChatHeader() {
+    const chat = activeChat();
+    const nameEl  = document.getElementById("chatHeaderName");
+    const orderEl = document.getElementById("chatHeaderOrder");
+    if (nameEl)  nameEl.innerText  = chat?.customerUsername || "Customer";
+    if (orderEl) orderEl.innerText = chat?.orderName ? "Order: " + chat.orderName : "Customer";
+}
+
+function renderMessages() {
+    const list = document.getElementById("msg-list");
+    if (!list) return;
+
+    if (_activeMsgs.length === 0) {
+        list.innerHTML = "<div style='text-align:center;padding:20px;opacity:.5'>No messages yet. Say hello! 👋</div>";
+        return;
+    }
+
+    const chat = activeChat();
+    // Find the last message sent by the rider, to show "Seen" underneath it
+    // once the customer's unread counter for this chat has gone back to 0.
+    const lastMineIdx = _activeMsgs.reduce((lastIdx, m, i) => m.senderUID === currentRiderUID ? i : lastIdx, -1);
+    const customerHasSeenLatest = !!chat && (chat.unreadCustomer || 0) === 0;
+
+    list.innerHTML = _activeMsgs.map((m, i) => {
+        const isMine = m.senderUID === currentRiderUID;
+        const time = formatTime(m.createdAt);
+        const showSeen = isMine && i === lastMineIdx && customerHasSeenLatest;
+        return `
+        <div class="msg ${isMine ? 'sent' : 'received'}">
+            <div>${escapeHtml(m.text)}</div>
+            <div class="msg-time">${time}</div>
+            ${showSeen ? `<div class="msg-seen">Seen ✓</div>` : ""}
+        </div>`;
+    }).join("");
+    list.scrollTop = list.scrollHeight;
+}
+
+window.closeChatProxy = function () {
+    _activeChatId = null;
+    _activeMsgs = [];
+    if (_unsubMessages) { _unsubMessages(); _unsubMessages = null; }
+    document.getElementById("main").classList.remove("chat-open");
+    document.getElementById("chat-area").innerHTML =
+        `<div class="no-chat">Select a conversation to start chatting</div>`;
+    renderSidebar();
+};
+
+// ── Send a message ───────────────────────────────────────────────────────────
+async function sendMsg() {
+    const input = document.getElementById("msg-input");
+    if (!input || !input.value.trim() || !_activeChatId) return;
+    const text = input.value.trim();
+    input.value = "";
+    input.disabled = true;
+
+    try {
+        await addDoc(collection(db, "chats", _activeChatId, "messages"), {
+            senderUID: currentRiderUID,
+            senderRole: "rider",
+            text,
+            createdAt: serverTimestamp()
+        });
+        await updateDoc(doc(db, "chats", _activeChatId), {
+            lastMessage: text,
+            updatedAt: serverTimestamp(),
+            // Bumps the customer's unread counter — read by the customer-side
+            // chat page as "unreadCustomer" and cleared to 0 there when the
+            // customer opens this same chat thread.
+            unreadCustomer: increment(1)
+        });
+    } catch (e) {
+        console.error("Failed to send message:", e);
+        input.value = text; // restore so the rider doesn't lose the draft
+    }
+
+    input.disabled = false;
+    input.focus();
+}
+
+window.handleKeyProxy = function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMsg();
+    }
+};
+
+window.goBack = function () { window.location.href = "rider-home.html"; };
+</script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pending Orders</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f4f6f9;
+            color: #2d2d2d;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+ 
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin: 16px 20px 0;
+            background: none; border: none;
+            color: #5a7fc1; font-size: 14px; font-weight: 600;
+            cursor: pointer; padding: 6px 10px; border-radius: 8px;
+            transition: background .15s;
+        }
+        .cancel-btn {
+            background: #fff0f0;
+            color: #c0392b;
+            border: 1px solid #f5c6c6;
+            padding: 7px 18px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .15s, transform .1s;
+        }
+        .cancel-btn:hover {
+            background: #fddede;
+            transform: scale(1.03);
+        }
+        .cancel-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* ── DELETE BUTTON (for rejected orders) ────────────────────── */
+        .delete-btn {
+            background: #fff0f0;
+            color: #c0392b;
+            border: 1.5px solid #f5c6c6;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .15s, transform .1s, box-shadow .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .delete-btn:hover {
+            background: #fddede;
+            box-shadow: 0 2px 8px rgba(192,57,43,.15);
+            transform: scale(1.03);
+        }
+        .delete-btn:active { transform: scale(0.97); }
+
+        .back-btn:hover { background: #e8eef8; }
+ 
+        .page-header { padding: 10px 24px 0; }
+        .page-title { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+        .page-sub { font-size: 13px; color: #777; margin-top: 2px; }
+ 
+        .refresh-row {
+            text-align: center;
+            font-size: 11px;
+            color: #bbb;
+            padding: 10px 0 0;
+        }
+        .refresh-dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #4caf50;
+            margin-right: 4px;
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.2; }
+        }
+ 
+        .order-list { padding: 14px 20px; display: flex; flex-direction: column; gap: 14px; }
+ 
+        .empty {
+            color: #aaa; text-align: center;
+            padding: 60px 0; font-size: 15px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .empty-icon { font-size: 40px; }
+ 
+        .order-card {
+            background: #fff; border-radius: 14px;
+            border: 1px solid #e4e9f4;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            overflow: hidden;
+            animation: fadeUp .25s ease both;
+        }
+        .order-card.is-rejected {
+            border-left: 4px solid #9b30d0;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+ 
+        .order-card-top {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px 8px; border-bottom: 1px solid #f0f2f8;
+        }
+        .order-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+ 
+        .order-type-badge {
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+        }
+        .order-badge   { background: #e8f0fe; color: #3a5fcf; }
+        .reserve-badge { background: #fff3e0; color: #b05e00; }
+ 
+        .status-badge {
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+            background: #fff3cd; color: #856404;
+            animation: pendingPulse 2s ease-in-out infinite;
+        }
+        .status-badge.rejected {
+            background: #f5e0ff; color: #5c007a;
+            animation: none;
+        }
+        @keyframes pendingPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+            50%       { box-shadow: 0 0 0 6px rgba(255, 193, 7, 0); }
+        }
+ 
+        .order-date { font-size: 11px; color: #aaa; white-space: nowrap; }
+ 
+        .order-body {
+            display: flex; gap: 12px; padding: 12px 16px 10px;
+        }
+        .order-img {
+            width: 70px; height: 70px; object-fit: cover;
+            border-radius: 10px; border: 1px solid #eee; flex-shrink: 0;
+            background: #f4f4f4;
+        }
+        .order-info { flex: 1; min-width: 0; }
+        .order-name { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+        .order-detail { font-size: 12px; color: #666; margin-top: 2px; }
+        .order-price { color: #2a7d4f; }
+        .order-seller {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; color: #888; margin-top: 4px;
+        }
+ 
+        .pending-notice {
+            margin: 0 16px 12px;
+            padding: 10px 14px;
+            background: #fffbea;
+            border: 1px solid #f5d478;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #7d5a00;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .pending-notice .pn-icon { font-size: 16px; flex-shrink: 0; }
+        .pending-notice strong { display: block; font-size: 13px; margin-bottom: 2px; }
+
+        /* ── REJECTED NOTICE BANNER ──────────────────────────────────── */
+        .rejected-notice {
+            margin: 0 16px 12px;
+            padding: 12px 14px;
+            background: #f8eeff;
+            border: 1px solid #d9a0f5;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #5c007a;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            animation: rejectPulse 1.5s ease-in-out 3;
+        }
+        .rejected-notice .rn-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+        .rejected-notice strong { display: block; font-size: 13px; margin-bottom: 3px; color: #4a0066; }
+        .rejected-notice p { line-height: 1.5; }
+
+        @keyframes rejectPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(155,48,208,0.25); }
+            50%       { box-shadow: 0 0 0 6px rgba(155,48,208,0); }
+        }
+
+        /* ── DELETE CONFIRM MODAL ─────────────────────────────────────── */
+        .del-modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.5); z-index: 998;
+            align-items: flex-end; justify-content: center;
+        }
+        .del-modal-overlay.open { display: flex; }
+        .del-modal-box {
+            background: #fff; border-radius: 20px 20px 0 0;
+            padding: 24px 24px 36px; width: 100%; max-width: 480px;
+            animation: slideUp .25s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to   { transform: translateY(0); }
+        }
+        .del-modal-handle {
+            width: 40px; height: 4px; border-radius: 3px;
+            background: #e0e0e0; margin: 0 auto 18px;
+        }
+        .del-modal-title { font-size: 17px; font-weight: 800; color: #1a1a2e; margin-bottom: 6px; }
+        .del-modal-sub   { font-size: 13px; color: #777; margin-bottom: 20px; line-height: 1.5; }
+        .del-modal-btns  { display: flex; gap: 10px; }
+        .del-modal-cancel {
+            flex: 1; padding: 12px; border-radius: 12px;
+            border: 1.5px solid #dde3ef; background: #f4f6f9;
+            font-size: 14px; font-weight: 700; color: #5a6a8a; cursor: pointer;
+        }
+        .del-modal-confirm {
+            flex: 2; padding: 12px; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, #c0392b, #e74c3c);
+            color: #fff; font-size: 14px; font-weight: 700;
+            cursor: pointer; transition: opacity .15s;
+        }
+        .del-modal-confirm:hover { opacity: .88; }
+        .del-modal-confirm:disabled { opacity: .5; cursor: not-allowed; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(60px);
+            background: #1a1a2e; color: #fff; padding: 11px 24px;
+            border-radius: 30px; font-size: 13px; font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2);
+            transition: transform .3s ease, opacity .3s ease; opacity: 0; z-index: 1000;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+ 
+    <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+ 
+    <div class="page-header">
+        <h1 class="page-title">⏳ Pending Orders</h1>
+        <p class="page-sub" id="customerLabel">—</p>
+    </div>
+ 
+    <div class="refresh-row">
+        <span class="refresh-dot"></span>Auto-refreshes every 10 seconds
+    </div>
+ 
+    <div class="order-list" id="orderList"></div>
+
+    <!-- Delete Confirm Modal -->
+    <div class="del-modal-overlay" id="delModalOverlay">
+        <div class="del-modal-box">
+            <div class="del-modal-handle"></div>
+            <div class="del-modal-title">🗑️ Delete Rejected Order?</div>
+            <div class="del-modal-sub">
+                This will permanently remove this rejected order from your records.
+                This action <strong>cannot be undone</strong>.
+            </div>
+            <div class="del-modal-btns">
+                <button class="del-modal-cancel" id="delModalCancelBtn">Cancel</button>
+                <button class="del-modal-confirm" id="delModalConfirmBtn">🗑️ Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+ 
+    <div class="toast" id="toast"></div>
+ 
+<script type="module">
+    import { getOrdersByCustomer, cancelOrder, db } from "./db.js";
+    import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const currentCustomer = localStorage.getItem("currentCustomer");
+    const currentUID      = localStorage.getItem("currentCustomerUID") || "";
+    if (!currentCustomer) {
+        alert("Please login as customer first.");
+        window.location.href = "login.html";
+    }
+
+    document.getElementById("customerLabel").innerText = "Hello, " + currentCustomer + " 👋";
+
+    let prevStatuses = {};   // orderId → status, to detect new rejections
+    let _allOrders = [];
+    let pendingDeleteId = null;
+
+    // ── Delete modal wiring ────────────────────────────────────────────────
+    document.getElementById("delModalCancelBtn").addEventListener("click", closeDelModal);
+    document.getElementById("delModalConfirmBtn").addEventListener("click", async function() {
+        if (!pendingDeleteId) return;
+        const btn = this;
+        btn.disabled = true;
+        btn.innerText = "Deleting...";
+        try {
+            await deleteDoc(doc(db, "orders", pendingDeleteId));
+            _allOrders = _allOrders.filter(o => o.id !== pendingDeleteId);
+            closeDelModal();
+            showToast("🗑️ Order deleted.");
+            renderOrders();
+        } catch(e) {
+            alert("Failed to delete: " + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "🗑️ Yes, Delete";
+        }
+    });
+
+    function openDelModal(orderId) {
+        pendingDeleteId = orderId;
+        document.getElementById("delModalOverlay").classList.add("open");
+    }
+    function closeDelModal() {
+        pendingDeleteId = null;
+        document.getElementById("delModalOverlay").classList.remove("open");
+    }
+
+    // ── Load orders ────────────────────────────────────────────────────────
+    async function loadOrders() {
+        try {
+            const fresh = await getOrdersByCustomer(currentUID);
+            const newStatuses = {};
+            fresh.forEach(o => { newStatuses[o.id] = o.status; });
+
+            // Detect newly rejected orders
+            const newlyRejected = fresh.filter(o =>
+                o.status === "rejected" &&
+                prevStatuses[o.id] !== undefined &&
+                prevStatuses[o.id] !== "rejected"
+            );
+            if (newlyRejected.length > 0) {
+                newlyRejected.forEach(o => {
+                    showRejectedNotification(o.name || "your order");
+                });
+            }
+
+            prevStatuses = newStatuses;
+            _allOrders   = fresh;
+        } catch(e) {
+            console.error("Failed to load orders:", e);
+        }
+        renderOrders();
+    }
+
+    // ── Filter: show pending + rejected (so customer sees rejection) ───────
+    function getVisibleOrders() {
+        return _allOrders.filter(o =>
+            o.status === "pending" || o.status === "rejected"
+        );
+    }
+
+    // ── Cancel handler ─────────────────────────────────────────────────────
+    async function handleCancel(orderId) {
+        const confirmed = confirm("Are you sure you want to cancel this order?");
+        if (!confirmed) return;
+        try {
+            await cancelOrder(orderId);
+            showToast("Order cancelled successfully.");
+            _allOrders = _allOrders.map(o => o.id === orderId ? { ...o, status: "cancelled" } : o);
+            renderOrders();
+        } catch(e) {
+            console.error("Cancel failed:", e);
+            alert("Failed to cancel order. Please try again.");
+        }
+    }
+
+    // ── Render ─────────────────────────────────────────────────────────────
+    function renderOrders() {
+        const orders = getVisibleOrders();
+        const list   = document.getElementById("orderList");
+        list.innerHTML = "";
+
+        if (orders.length === 0) {
+            list.innerHTML = `
+                <div class="empty">
+                    <div class="empty-icon">✅</div>
+                    <div>No pending orders!</div>
+                </div>`;
+            return;
+        }
+
+        orders.forEach(order => {
+            const card          = document.createElement("div");
+            const isRejected    = order.status === "rejected";
+            const isReservation = order.type === "reservation";
+
+            card.classList.add("order-card");
+            if (isRejected) card.classList.add("is-rejected");
+
+            const rawDate    = order.createdAt?.seconds
+                ? new Date(order.createdAt.seconds * 1000)
+                : order.createdAt ? new Date(order.createdAt) : null;
+            const displayDate = rawDate
+                ? rawDate.toLocaleDateString("en-PH", { year:"numeric", month:"short", day:"numeric" })
+                : "—";
+
+            // Status badge
+            const statusBadge = isRejected
+                ? `<span class="status-badge rejected">🚫 Rejected</span>`
+                : `<span class="status-badge">🕐 Pending</span>`;
+
+            // Bottom notice + action button
+            const noticeAndAction = isRejected
+                ? `
+                    <div class="rejected-notice">
+                        <div class="rn-icon">🚫</div>
+                        <div>
+                            <strong>Order Rejected by Seller</strong>
+                            <p>Unfortunately, the seller has rejected this order. You may delete this from your records or try ordering again.</p>
+                        </div>
+                    </div>
+                    <div style="padding: 0 16px 14px; text-align: right;">
+                        <button class="delete-btn" data-id="${order.id}">🗑️ Delete Order</button>
+                    </div>`
+                : `
+                    <div class="pending-notice">
+                        <div class="pn-icon">⏳</div>
+                        <div>
+                            <strong>Waiting for seller approval</strong>
+                            Your order is currently being reviewed. Please wait for the seller to process it.
+                        </div>
+                    </div>
+                    <div style="padding: 0 16px 14px; text-align: right;">
+                        <button class="cancel-btn" data-id="${order.id}">✕ Cancel Order</button>
+                    </div>`;
+
+            card.innerHTML = `
+                <div class="order-card-top">
+                    <div class="order-meta">
+                        <span class="order-type-badge ${isReservation ? 'reserve-badge' : 'order-badge'}">
+                            ${isReservation ? '📅 Reservation' : '🛒 Order'}
+                        </span>
+                        ${statusBadge}
+                    </div>
+                    <span class="order-date">${displayDate}</span>
+                </div>
+
+                <div class="order-body">
+                    <img class="order-img" src="${order.image || ''}" alt="${order.name || ''}">
+                    <div class="order-info">
+                        <h3 class="order-name">${order.name || 'Item'}</h3>
+                        <p class="order-detail">Size: <strong>${order.size || '—'}</strong> &nbsp;|&nbsp; Qty: <strong>${order.qty || 1}</strong></p>
+                        <p class="order-detail">Price: <strong class="order-price">₱${(parseFloat(order.price || 0) * (order.qty || 1)).toFixed(0)}</strong></p>
+                        <p class="order-seller">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9 22 9 12 15 12 15 22"/>
+                            </svg>
+                            ${order.seller || '—'}
+                        </p>
+                        ${isReservation && order.date ? `<p class="order-detail">Reserve Date: <strong>${order.date}</strong></p>` : ''}
+                        ${order.referenceNum ? `<p class="order-detail">Ref #: <strong>${order.referenceNum}</strong></p>` : ''}
+                    </div>
+                </div>
+
+                ${noticeAndAction}
+            `;
+
+            // Attach listeners
+            if (isRejected) {
+                card.querySelector(".delete-btn").addEventListener("click", () => openDelModal(order.id));
+            } else {
+                card.querySelector(".cancel-btn").addEventListener("click", () => handleCancel(order.id));
+            }
+
+            list.appendChild(card);
+        });
+    }
+
+    // ── Rejected popup notification ────────────────────────────────────────
+    function showRejectedNotification(itemName) {
+        const existing = document.getElementById("rejectNotif");
+        if (existing) existing.remove();
+        const notif = document.createElement("div");
+        notif.id = "rejectNotif";
+        notif.style.cssText = `
+            position:fixed;top:20px;left:50%;transform:translateX(-50%);
+            background:#7b00a8;color:#fff;padding:14px 22px;border-radius:14px;
+            font-size:13px;font-weight:600;box-shadow:0 6px 24px rgba(123,0,168,.35);
+            z-index:1001;max-width:90vw;text-align:center;
+            animation:slideDown .35s ease;display:flex;align-items:center;gap:10px;
+        `;
+        notif.innerHTML = `
+            <style>@keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}</style>
+            <span style="font-size:18px;">🚫</span>
+            <span>Your order for "<strong>${itemName}</strong>" has been rejected by the seller.</span>
+        `;
+        document.body.appendChild(notif);
+        setTimeout(() => notif.remove(), 6000);
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById("toast");
+        toast.innerText = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 3000);
+    }
+
+    window.goBack = function() { window.location.href = "customer-profile.html"; };
+
+    // Initial load then poll every 10s
+    loadOrders();
+    setInterval(loadOrders, 10000);
+</script>
+</body>
+</html>

@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:         #111111;
+      --card:       #1c1c1c;
+      --card-inner: #252525;
+      --border:     rgba(255,255,255,0.07);
+      --green:      #27ae60;
+      --green-lit:  #2ecc71;
+      --orange:     #e8a020;
+      --blue:       #1a4a8a;
+      --blue-lit:   #4d9de0;
+      --blue-dim:   rgba(30,80,160,0.55);
+      --text:       #ffffff;
+      --muted:      #999;
+      --input-bg:   #1a1a1a;
+      --red-line:   #e03030;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 110px;
+    }
+    .top-header {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--bg);
+      padding: 22px 20px 0;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .top-header h1 {
+      font-size: 1.5rem; font-weight: 800;
+      letter-spacing: 0.01em; text-align: center;
+      width: 100%; padding: 18px 0 16px;
+    }
+    .back-btn {
+      position: absolute; right: 20px; top: 50%;
+      transform: translateY(-50%);
+      background: #1e1e1e;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 50px;
+      color: var(--text);
+      font-size: 0.82rem; font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      padding: 7px 16px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      transition: background 0.15s;
+    }
+    .back-btn:hover { background: #2a2a2a; }
+    .red-line {
+      height: 3px;
+      background: linear-gradient(to right, transparent, var(--red-line) 20%, var(--red-line) 80%, transparent);
+      margin-bottom: 0;
+    }
+    .body {
+      padding: 24px 20px;
+      display: flex; flex-direction: column; gap: 20px;
+      max-width: 860px; margin: 0 auto;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      animation: fadeUp 0.3s ease both;
+    }
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.10s; }
+    .card:nth-child(3) { animation-delay: 0.15s; }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(12px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .card-title {
+      font-size: 1.05rem; font-weight: 700;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .order-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .order-item:last-of-type { border-bottom: none; }
+    .item-img {
+      width: 58px; height: 58px;
+      border-radius: 10px; object-fit: cover;
+      background: #2a2a2a; flex-shrink: 0;
+    }
+    .item-info { flex: 1; min-width: 0; }
+    .item-name {
+      font-size: 0.95rem; font-weight: 700;
+      margin-bottom: 3px;
+    }
+    .item-meta { font-size: 0.78rem; color: var(--muted); }
+    .item-seller { font-size: 0.78rem; color: var(--blue-lit); font-weight: 600; margin-top: 2px; }
+    .item-price {
+      font-size: 1rem; font-weight: 700;
+      color: var(--orange); white-space: nowrap;
+    }
+
+    /* ── DELIVERY FEE ROW (NEW) ── */
+    .fee-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; font-size: 0.88rem;
+    }
+    .fee-label { color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .fee-amount { font-weight: 700; color: #fff; }
+    .fee-distance-tag {
+      font-size: 0.68rem; font-weight: 700;
+      color: var(--blue-lit); background: rgba(77,157,224,0.12);
+      border: 1px solid rgba(77,157,224,0.3);
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .fee-estimate-tag {
+      font-size: 0.68rem; font-weight: 700;
+      color: var(--orange); background: rgba(232,160,32,0.1);
+      border: 1px solid rgba(232,160,32,0.3);
+      padding: 2px 8px; border-radius: 20px;
+    }
+
+    .total-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0 12px; }
+    .total-row {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .total-label { font-size: 1rem; font-weight: 600; }
+    .total-amount { font-size: 1.35rem; font-weight: 800; color: var(--orange); }
+    .gcash-card-title {
+      font-size: 1.05rem; font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .gcash-info-box {
+      background: var(--blue-dim);
+      border: 1.5px solid rgba(77,157,224,0.35);
+      border-radius: 14px;
+      padding: 18px 20px;
+      display: flex; align-items: center; gap: 18px;
+      margin-bottom: 22px;
+    }
+    .gcash-icon-col {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      flex-shrink: 0;
+    }
+    .gcash-icon-wrap {
+      width: 44px; height: 44px;
+      background: rgba(77,157,224,0.2);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .gcash-label-text {
+      font-size: 0.68rem; font-weight: 700;
+      color: var(--blue-lit); letter-spacing: 0.04em;
+    }
+    .gcash-details { flex: 1; }
+    .gcash-send-to { font-size: 0.76rem; color: var(--muted); margin-bottom: 4px; }
+    .gcash-number {
+      font-size: 1.1rem; font-weight: 700; color: #fff;
+      letter-spacing: 0.04em; margin-bottom: 2px;
+    }
+    .gcash-name { font-size: 0.88rem; color: var(--blue-lit); font-weight: 600; }
+    .upload-section-title {
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    .upload-box {
+      display: block; cursor: pointer;
+      border: 2px dashed rgba(77,157,224,0.45);
+      border-radius: 12px;
+      background: var(--input-bg);
+      text-align: center;
+      padding: 28px 16px;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 20px;
+    }
+    .upload-box:hover {
+      border-color: var(--blue-lit);
+      background: rgba(30,80,160,0.12);
+    }
+    .upload-box input[type="file"] { display: none; }
+    .upload-icon-svg { margin-bottom: 10px; opacity: 0.7; }
+    .upload-box p { font-size: 0.92rem; color: var(--text); font-weight: 600; margin-bottom: 3px; }
+    .upload-box span { font-size: 0.75rem; color: var(--muted); }
+    #screenshotPreview {
+      display: none; width: 100%;
+      border-radius: 10px; max-height: 220px; object-fit: cover;
+    }
+    .ref-label {
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 8px; display: block;
+    }
+    .ref-optional { font-weight: 400; color: #555; text-transform: none; letter-spacing: 0; }
+    .ref-input {
+      width: 100%; padding: 12px 16px;
+      background: var(--input-bg);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 10px; color: var(--text);
+      font-size: 0.92rem; font-family: 'Poppins', sans-serif;
+      outline: none; transition: border-color 0.15s;
+    }
+    .ref-input::placeholder { color: #3a3a3a; }
+    .ref-input:focus { border-color: var(--blue-lit); }
+    .method-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .method-tab {
+      flex: 1; padding: 13px 8px;
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      background: #181818;
+      color: var(--muted);
+      font-size: 0.82rem; font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .method-tab.active {
+      border-color: var(--green);
+      background: rgba(39,174,96,0.1);
+      color: var(--green-lit);
+    }
+    .cod-panel {
+      background: #0d2a1a;
+      border: 1px solid rgba(39,174,96,0.3);
+      border-radius: 12px; padding: 18px 16px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .cod-icon-wrap {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(39,174,96,0.15);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .cod-text h4 { font-size: 0.95rem; font-weight: 700; color: var(--green-lit); margin-bottom: 4px; }
+    .cod-text p  { font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
+    .addr-name  { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .addr-phone { font-size: 0.88rem; color: var(--muted); font-weight: 400; margin-left: 10px; }
+    .addr-line  { font-size: 0.85rem; color: #bbb; line-height: 1.6; }
+    .addr-tag {
+      display: inline-block; margin-top: 10px;
+      font-size: 0.72rem; font-weight: 700;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      padding: 3px 10px; border-radius: 6px; color: #ccc;
+    }
+    .no-address {
+      background: rgba(231,76,60,0.08);
+      border: 1px solid rgba(231,76,60,0.25);
+      border-radius: 10px; padding: 14px 16px;
+      display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    }
+    .no-address p { font-size: 0.82rem; color: #e74c3c; font-weight: 600; }
+    .change-addr-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 16px; padding: 9px 18px;
+      background: transparent;
+      border: 1.5px solid var(--blue-lit);
+      border-radius: 8px; color: var(--blue-lit);
+      font-size: 0.83rem; font-weight: 700;
+      font-family: 'Poppins', sans-serif; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .change-addr-btn:hover {
+      background: rgba(77,157,224,0.1);
+    }
+    .confirm-wrap {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 16px 20px 22px;
+      background: linear-gradient(to top, #0e0e0e 65%, transparent);
+      z-index: 40;
+    }
+    .confirm-btn {
+      width: 100%; max-width: 860px;
+      display: block; margin: 0 auto;
+      padding: 18px;
+      background: var(--green);
+      color: #fff; border: none; border-radius: 16px;
+      font-size: 1.05rem; font-weight: 700;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer; letter-spacing: 0.02em;
+      transition: background 0.2s, transform 0.12s;
+      box-shadow: 0 6px 24px rgba(39,174,96,0.4);
+    }
+    .confirm-btn:hover  { background: var(--green-lit); }
+    .confirm-btn:active { transform: scale(0.99); }
+    .confirm-btn:disabled { background: #2a2a2a; color: #555; cursor: not-allowed; box-shadow: none; }
+    #loadingOverlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.78); z-index: 9999;
+      justify-content: center; align-items: center;
+      flex-direction: column; gap: 14px;
+    }
+    #loadingOverlay.show { display: flex; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3.5px solid rgba(255,255,255,0.1);
+      border-top-color: var(--green-lit);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loadingMsg { font-size: 0.88rem; color: var(--muted); }
+    .success-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.88); z-index: 10000;
+      justify-content: center; align-items: center; padding: 20px;
+    }
+    .success-card {
+      background: var(--card); border: 1px solid rgba(39,174,96,0.3);
+      border-radius: 20px; padding: 40px 28px;
+      text-align: center; max-width: 340px; width: 100%;
+      animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes popIn {
+      from { opacity:0; transform:scale(0.82); }
+      to   { opacity:1; transform:scale(1); }
+    }
+    .success-icon { margin-bottom: 20px; }
+    .success-card h2 { font-size: 1.35rem; font-weight: 800; margin-bottom: 10px; }
+    .success-card p  { font-size: 0.85rem; color: var(--muted); line-height: 1.65; margin-bottom: 26px; }
+    .success-btn {
+      width: 100%; padding: 14px;
+      background: var(--green); color: #fff;
+      border: none; border-radius: 12px;
+      font-size: 0.95rem; font-weight: 700;
+      font-family: 'Poppins', sans-serif; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .success-btn:hover { background: var(--green-lit); }
+    .panel { display: none; }
+    .panel.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <span id="loadingMsg">Please wait...</span>
+</div>
+
+<div style="background:var(--bg); position:sticky; top:0; z-index:50;">
+  <div class="top-header">
+    <h1>Payment</h1>
+    <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+  </div>
+  <div class="red-line"></div>
+</div>
+
+<div class="body">
+
+  <div class="card">
+    <div class="card-title">Order Summary</div>
+    <div id="orderSummary"></div>
+
+    <!-- Delivery fee row (NEW) -->
+    <div class="fee-row" id="feeRow" style="display:none;">
+      <span class="fee-label">
+        🛵 Delivery Fee
+        <span id="feeTag"></span>
+      </span>
+      <span class="fee-amount" id="feeAmount">₱0</span>
+    </div>
+
+    <hr class="total-divider">
+    <div class="total-row">
+      <span class="total-label">Total</span>
+      <span class="total-amount" id="grandTotal">₱0</span>
+    </div>
+  </div>
+
+  <div class="card" id="paymentCard">
+    <div class="method-tabs">
+      <button class="method-tab active" id="tabGcash" onclick="selectMethod('gcash')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2"/>
+          <line x1="12" y1="18" x2="12" y2="18" stroke-width="3"/>
+        </svg>
+        GCash
+      </button>
+      <button class="method-tab" id="tabCod" onclick="selectMethod('cod')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="6" width="20" height="14" rx="2"/>
+          <path d="M2 10h20"/>
+          <circle cx="7" cy="15" r="1" fill="currentColor"/>
+        </svg>
+        Cash on Delivery
+      </button>
+    </div>
+
+    <div class="panel visible" id="gcashPanel">
+      <div class="gcash-card-title">Pay via GCash</div>
+      <div class="gcash-info-box">
+        <div class="gcash-icon-col">
+          <div class="gcash-icon-wrap">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4d9de0" stroke-width="2">
+              <rect x="5" y="2" width="14" height="20" rx="2"/>
+              <line x1="12" y1="18" x2="12" y2="18" stroke-width="3"/>
+            </svg>
+          </div>
+          <span class="gcash-label-text">GCash</span>
+        </div>
+        <div class="gcash-details">
+          <div class="gcash-send-to">Send payment to:</div>
+          <div class="gcash-number" id="gcashNumber">—</div>
+          <div class="gcash-name"   id="gcashName">—</div>
+        </div>
+      </div>
+
+      <div class="upload-section-title">Upload GCash Screenshot</div>
+      <label class="upload-box">
+        <div id="uploadPlaceholder">
+          <div class="upload-icon-svg">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.6">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <p>Tap to upload receipt</p>
+          <span>JPG, PNG supported</span>
+        </div>
+        <img id="screenshotPreview" src="" alt="Receipt">
+        <input type="file" id="screenshotInput" accept="image/*" onchange="previewScreenshot(this)">
+      </label>
+
+      <label class="ref-label">
+        GCash Reference Number <span class="ref-optional">(optional)</span>
+      </label>
+      <input type="text" class="ref-input" id="referenceNum" placeholder="e.g. 1234567890">
+    </div>
+
+    <div class="panel" id="codPanel">
+      <div class="gcash-card-title">Cash on Delivery</div>
+      <div class="cod-panel">
+        <div class="cod-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2">
+            <rect x="2" y="6" width="20" height="14" rx="2"/>
+            <path d="M2 10h20"/>
+            <circle cx="7" cy="15" r="1" fill="#27ae60"/>
+          </svg>
+        </div>
+        <div class="cod-text">
+          <h4>Cash on Delivery</h4>
+          <p>Pay in cash when your order arrives. Please have the exact amount ready.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <div class="card-title">Delivery Address</div>
+    <div id="addressDisplay"></div>
+    <button class="change-addr-btn" onclick="goToChangeAddress()">
+      Change Address
+    </button>
+  </div>
+
+</div>
+
+<div class="confirm-wrap">
+  <button class="confirm-btn" id="confirmBtn" onclick="confirmPayment()">Confirm Payment</button>
+</div>
+
+<div class="success-overlay" id="successOverlay">
+  <div class="success-card">
+    <div class="success-icon">
+      <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.5">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    </div>
+    <h2>Order Placed!</h2>
+    <p id="successMsg"></p>
+    <button class="success-btn" onclick="window.location.href='foruzer.html'">Back to Home</button>
+  </div>
+</div>
+
+<div class="success-overlay" id="reqAlertOverlay">
+  <div class="success-card" style="border-color:rgba(232,160,32,0.35);">
+    <div class="success-icon" id="reqAlertIcon">
+      <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <h2 id="reqAlertTitle">Almost there!</h2>
+    <p id="reqAlertMsg"></p>
+    <button class="success-btn" style="background:#e8a020;" onclick="document.getElementById('reqAlertOverlay').style.display='none'">Got it</button>
+  </div>
+</div>
+
+<script type="module">
+import {
+  db, auth, placeOrder, getAddresses, getSellerProfile, getCart, saveCart,
+  autoVerifyGcashPayment, getSellerByUsername, getStore, computeDeliveryFee
+} from "./db.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const showLoading = (msg) => {
+  document.getElementById("loadingMsg").textContent = msg || "Please wait...";
+  document.getElementById("loadingOverlay").classList.add("show");
+};
+const hideLoading = () => document.getElementById("loadingOverlay").classList.remove("show");
+
+function showRequirementAlert(title, message) {
+  document.getElementById("reqAlertTitle").textContent = title;
+  document.getElementById("reqAlertMsg").textContent    = message;
+  document.getElementById("reqAlertOverlay").style.display = "flex";
+}
+
+const currentCustomer = localStorage.getItem("currentCustomer");
+const currentUID      = localStorage.getItem("currentCustomerUID");
+if (!currentCustomer || !currentUID) {
+  alert("Please login first.");
+  window.location.href = "login.html";
+  throw new Error("stop");
+}
+
+localStorage.removeItem("addressFlowReturnTo");
+
+const checkoutItems = JSON.parse(localStorage.getItem("checkoutItems_" + currentCustomer)) || [];
+const buyNowItem    = JSON.parse(localStorage.getItem("buynow_" + currentCustomer));
+const items = checkoutItems.length > 0 ? checkoutItems : (buyNowItem ? [buyNowItem] : []);
+if (items.length === 0) {
+  alert("No items to pay for.");
+  window.location.href = "cart.html";
+  throw new Error("stop");
+}
+
+const summaryEl = document.getElementById("orderSummary");
+let itemsSubtotal = 0;
+items.forEach(item => {
+  const subtotal = parseFloat(item.price) * (item.qty || 1);
+  itemsSubtotal += subtotal;
+  summaryEl.innerHTML += `
+    <div class="order-item">
+      <img class="item-img" src="${item.image || ''}" alt="${item.name}"
+           onerror="this.style.opacity='0'">
+      <div class="item-info">
+        <div class="item-name">${item.name}</div>
+        <div class="item-meta">Size: ${item.size || '—'} &nbsp;|&nbsp; Qty: ${item.qty || 1}</div>
+        <div class="item-seller">${item.seller || ''}</div>
+      </div>
+      <span class="item-price">₱${subtotal.toFixed(0)}</span>
+    </div>`;
+});
+
+// Delivery fee gets added once the address + store coordinates are known
+// (see computeDeliveryFee() below). Start grandTotal at just the items
+// subtotal, then top it up.
+let grandTotal = itemsSubtotal;
+document.getElementById("grandTotal").textContent = "₱" + grandTotal.toFixed(0);
+
+const firstSeller = items[0]?.seller;
+let sellerDoc = null;
+if (firstSeller) {
+  showLoading("Loading payment info...");
+  try {
+    const profile = await getSellerProfile(firstSeller);
+    document.getElementById("gcashNumber").textContent = profile.gcashNumber || profile.phoneNumber || "—";
+    document.getElementById("gcashName").textContent   = profile.ownerName   || profile.storeName  || firstSeller;
+  } catch {
+    document.getElementById("gcashNumber").textContent = "—";
+    document.getElementById("gcashName").textContent   = firstSeller;
+  }
+  // Also grab the seller's account doc so we can look up their store's
+  // coordinates for the distance-based delivery fee below.
+  try { sellerDoc = await getSellerByUsername(firstSeller); } catch { sellerDoc = null; }
+  hideLoading();
+}
+
+let defaultAddr = null;
+showLoading("Loading address...");
+try {
+  const addrs = await getAddresses(currentUID);
+  const chosenAddressId = localStorage.getItem("checkoutAddressId");
+  defaultAddr = (chosenAddressId && addrs.find(a => a.id === chosenAddressId))
+    || addrs.find(a => a.isDefault)
+    || addrs[0]
+    || null;
+} catch { defaultAddr = null; }
+hideLoading();
+
+(function renderAddress() {
+  const el = document.getElementById("addressDisplay");
+  if (defaultAddr) {
+    el.innerHTML = `
+      <div class="addr-name">
+        ${defaultAddr.fullName}
+        <span class="addr-phone">${defaultAddr.phone}</span>
+      </div>
+      <div class="addr-line">${defaultAddr.street}</div>
+      <div class="addr-line">${defaultAddr.city}${defaultAddr.zip ? ', ' + defaultAddr.zip : ''}</div>
+      <span class="addr-tag">${defaultAddr.label || 'Home'}</span>`;
+  } else {
+    el.innerHTML = `
+      <div class="no-address">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p>No delivery address yet. Please add one.</p>
+      </div>`;
+  }
+})();
+
+// ── Distance-based delivery fee (NEW) ───────────────────────────────────────
+// Extra charge based on straight-line distance between the seller's store
+// and the customer's chosen address. Falls back to a flat fee automatically
+// if either location is missing lat/lng (see db.js), so checkout is never
+// blocked — it just won't be distance-accurate until coordinates exist.
+let deliveryInfo = { fee: 0, distanceKm: null, method: "none" };
+if (defaultAddr) {
+  showLoading("Calculating delivery fee...");
+  try {
+    const store = sellerDoc ? await getStore(sellerDoc.id) : null;
+    const storeCoords = (store && store.lat != null && store.lng != null)
+      ? { lat: store.lat, lng: store.lng } : null;
+    const addrCoords = (defaultAddr.lat != null && defaultAddr.lng != null)
+      ? { lat: defaultAddr.lat, lng: defaultAddr.lng } : null;
+    deliveryInfo = computeDeliveryFee(storeCoords, addrCoords);
+  } catch (e) {
+    console.error("Delivery fee calculation failed:", e);
+    deliveryInfo = { fee: 49, distanceKm: null, method: "flat-fallback" };
+  }
+  hideLoading();
+
+  grandTotal = itemsSubtotal + deliveryInfo.fee;
+  document.getElementById("grandTotal").textContent = "₱" + grandTotal.toFixed(0);
+
+  const feeRow = document.getElementById("feeRow");
+  const feeTag = document.getElementById("feeTag");
+  feeRow.style.display = "flex";
+  document.getElementById("feeAmount").textContent = "₱" + deliveryInfo.fee.toFixed(0);
+  if (deliveryInfo.method === "distance") {
+    feeTag.className = "fee-distance-tag";
+    feeTag.textContent = deliveryInfo.distanceKm + " km";
+  } else {
+    feeTag.className = "fee-estimate-tag";
+    feeTag.textContent = "estimated";
+    feeTag.title = "Exact distance unavailable — using a flat estimated fee until store/address locations are set.";
+  }
+}
+
+window.goToChangeAddress = () => {
+  localStorage.setItem("addressFlowReturnTo", "payment");
+  window.location.href = "address-book.html";
+};
+
+let selectedMethod = "gcash";
+window.selectMethod = (method) => {
+  selectedMethod = method;
+  document.getElementById("tabGcash").classList.toggle("active", method === "gcash");
+  document.getElementById("tabCod").classList.toggle("active",   method === "cod");
+  document.getElementById("gcashPanel").classList.toggle("visible", method === "gcash");
+  document.getElementById("codPanel").classList.toggle("visible",   method === "cod");
+};
+
+let screenshotData = null;
+window.previewScreenshot = (input) => {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    screenshotData = e.target.result;
+    const preview  = document.getElementById("screenshotPreview");
+    preview.src    = screenshotData;
+    preview.style.display = "block";
+    document.getElementById("uploadPlaceholder").style.display = "none";
+  };
+  reader.readAsDataURL(file);
+};
+
+window.confirmPayment = async () => {
+  if (!defaultAddr) {
+    localStorage.setItem("addressFlowReturnTo", "payment");
+    showRequirementAlert("Address Needed", "Please add a delivery address before placing your order.");
+    window.location.href = "address-book.html";
+    return;
+  }
+  if (selectedMethod === "gcash" && !screenshotData) {
+    showRequirementAlert("Screenshot Needed", "Please upload your GCash payment screenshot so the seller can verify your payment.");
+    return;
+  }
+
+  const referenceNum = document.getElementById("referenceNum")?.value.trim() || "";
+  const btn = document.getElementById("confirmBtn");
+  btn.disabled = true;
+  showLoading("Placing your order...");
+
+  try {
+    for (const item of items) {
+      const orderRef = await placeOrder({
+        customerUID:      currentUID,
+        customerUsername: currentCustomer,
+        sellerUsername:   item.seller,
+        productId:        item.productId || "",
+        name:             item.name,
+        image:            item.image,
+        size:             item.size || "",
+        qty:              item.qty  || 1,
+        price:            item.price,
+        paymentMethod:    selectedMethod,
+        gcashScreenshot:  selectedMethod === "gcash" ? screenshotData : null,
+        referenceNum:     selectedMethod === "gcash" ? referenceNum : "",
+        paymentStatus:    selectedMethod === "gcash" ? "pending-verification" : "cod-unpaid",
+        paymentVerified:  false,
+        address:          defaultAddr,
+        // Distance-based delivery fee, recorded per order for the seller's
+        // and rider's reference (shown on the rider dashboard).
+        deliveryFee:        deliveryInfo.fee,
+        deliveryDistanceKm: deliveryInfo.distanceKm,
+        deliveryFeeMethod:  deliveryInfo.method,
+        status: "pending",
+        statusHistory: [{
+          status:    "pending",
+          timestamp: new Date().toISOString(),
+          note:      "Order placed by customer"
+        }]
+      });
+
+      if (selectedMethod === "gcash" && orderRef?.id) {
+        try { await autoVerifyGcashPayment(orderRef.id, referenceNum); } catch (e) { console.error("Auto-verify failed:", e); }
+      }
+    }
+
+    localStorage.removeItem("checkoutItems_" + currentCustomer);
+    localStorage.removeItem("buynow_"        + currentCustomer);
+    localStorage.removeItem("checkoutAddressId");
+    try {
+      let cart = await getCart(currentUID) || [];
+      const paidNames = items.map(i => i.name);
+      cart = cart.filter(i => !paidNames.includes(i.name));
+      await saveCart(currentUID, cart);
+    } catch(e) { console.error("Cart cleanup:", e); }
+
+    hideLoading();
+    const label = selectedMethod === "gcash" ? "GCash" : "Cash on Delivery";
+    document.getElementById("successMsg").textContent =
+      "Your order was placed via " + label + ". " +
+      (selectedMethod === "gcash"
+        ? "The seller will verify your payment screenshot and confirm your order shortly."
+        : "Please prepare the exact amount upon delivery.");
+    document.getElementById("successOverlay").style.display = "flex";
+
+  } catch(err) {
+    hideLoading();
+    btn.disabled = false;
+    showRequirementAlert("Order Failed", "Something went wrong placing your order: " + err.message);
+  }
+};
+
+window.goBack = () => window.location.href = "shop.html";
+</script>
+</body>
+</html>

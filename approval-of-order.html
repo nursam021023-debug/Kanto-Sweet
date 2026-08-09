@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Approval</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f4f6f9;
+            color: #2d2d2d;
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+
+        .status-btn.s-cancelled { background: #fde8e8; color: #8b0000; border-color: #f5a0a0; }
+        .status-btn.s-rejected  { background: #f5e0ff; color: #5c007a; border-color: #d9a0f5; }
+
+        .cancelled-notice {
+            margin: 0 16px 12px;
+            padding: 10px 14px;
+            background: #fff0f0;
+            border: 1px solid #f5a0a0;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #8b0000;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            animation: cancelPulse 1.5s ease-in-out 3;
+        }
+        .cancelled-notice .cn-icon { font-size: 16px; flex-shrink: 0; }
+        .cancelled-notice strong { display: block; font-size: 13px; margin-bottom: 2px; }
+
+        @keyframes cancelPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.3); }
+            50%       { box-shadow: 0 0 0 6px rgba(220,53,69,0); }
+        }
+
+        .order-card.is-cancelled { border-left: 4px solid #e74c3c; }
+        .order-card.is-rejected  { border-left: 4px solid #9b30d0; }
+        .order-card.is-delivered { border-left: 4px solid #28a745; }
+        .order-card.is-reserved  { border-left: 4px solid #f39c12; }
+        .order-card.is-res-rejected { border-left: 4px solid #c0392b; }
+
+        .tab-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 18px; height: 18px;
+            background: #e74c3c; color: #fff;
+            border-radius: 50%; font-size: 10px; font-weight: 800;
+            margin-left: 5px; padding: 0 4px;
+            animation: blink 1s ease-in-out infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.4; }
+        }
+
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin: 16px 20px 0;
+            background: none; border: none;
+            color: #5a7fc1; font-size: 14px; font-weight: 600;
+            cursor: pointer; padding: 6px 10px; border-radius: 8px;
+            transition: background .15s;
+        }
+        .back-btn:hover { background: #e8eef8; }
+
+        .page-header { padding: 10px 24px 0; }
+        .page-title { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+        .page-sub { font-size: 13px; color: #777; margin-top: 2px; }
+
+        /* ── STATS STRIP (online-shop-style order summary) ────────────── */
+        .stats-strip {
+            display: flex; gap: 10px; overflow-x: auto;
+            padding: 14px 20px 4px; scrollbar-width: none;
+        }
+        .stats-strip::-webkit-scrollbar { display: none; }
+        .stat-pill {
+            flex: 0 0 auto; min-width: 92px;
+            background: #fff; border: 1px solid #e4e9f4; border-radius: 14px;
+            padding: 10px 16px; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        }
+        .stat-num { display: block; font-size: 19px; font-weight: 800; color: #1a1a2e; }
+        .stat-label { display: block; font-size: 10.5px; font-weight: 600; color: #8a96b0; text-transform: uppercase; letter-spacing: .3px; margin-top: 2px; }
+        .stat-pill.stat-pending .stat-num   { color: #856404; }
+        .stat-pill.stat-toship .stat-num    { color: #0c5460; }
+        .stat-pill.stat-toreceive .stat-num { color: #004085; }
+        .stat-pill.stat-delivered .stat-num { color: #0a5940; }
+
+        .controls { padding: 14px 20px 0; }
+        .search-wrap {
+            display: flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px solid #dde3ef;
+            border-radius: 10px; padding: 9px 14px;
+            margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        }
+        .search-wrap svg { color: #aaa; flex-shrink: 0; }
+        .search-wrap input {
+            border: none; outline: none; flex: 1;
+            font-size: 14px; background: transparent; color: #333;
+        }
+
+        .filter-tabs {
+            display: flex; gap: 7px; flex-wrap: wrap;
+            padding-bottom: 4px;
+        }
+        .tab {
+            padding: 6px 14px; border-radius: 20px;
+            border: 1.5px solid #d0d7e8; background: #fff;
+            font-size: 12px; font-weight: 600; color: #5a6a8a;
+            cursor: pointer; transition: all .15s; white-space: nowrap;
+        }
+        .tab.active, .tab:hover {
+            background: #1a1a2e; color: #fff; border-color: #1a1a2e;
+        }
+
+        .order-list { padding: 14px 20px; display: flex; flex-direction: column; gap: 14px; }
+        .empty { color: #aaa; text-align: center; padding: 40px 0; font-size: 15px; }
+        .loading { color: #888; text-align: center; padding: 40px 0; font-size: 14px; }
+
+        .order-card {
+            background: #fff; border-radius: 14px;
+            border: 1px solid #e4e9f4;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            overflow: hidden;
+            animation: fadeUp .25s ease both;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .order-card-top {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px 8px; border-bottom: 1px solid #f0f2f8;
+        }
+        .order-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+        .order-type-badge, .status-badge {
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+            letter-spacing: .3px;
+        }
+        .order-badge   { background: #e8f0fe; color: #3a5fcf; }
+        .reserve-badge { background: #fff3e0; color: #b05e00; }
+
+        .order-date { font-size: 11px; color: #aaa; white-space: nowrap; }
+
+        .order-body {
+            display: flex; gap: 12px; padding: 12px 16px 10px;
+        }
+        .order-img {
+            width: 70px; height: 70px; object-fit: cover;
+            border-radius: 10px; border: 1px solid #eee; flex-shrink: 0;
+            background: #f4f4f4;
+        }
+        .order-info { flex: 1; min-width: 0; }
+        .order-name { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+        .order-detail { font-size: 12px; color: #666; margin-top: 2px; }
+        .order-price { color: #2a7d4f; }
+        .order-customer {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; color: #888; margin-top: 4px;
+        }
+
+        /* ── Delivery fee pill (shows what the rider earns for this delivery) ── */
+        .fee-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #eef6ff; color: #1a5fa8; font-size: 11px; font-weight: 700;
+            border: 1px solid #cfe3fb; border-radius: 999px; padding: 3px 10px;
+            margin-top: 6px;
+        }
+        .fee-pill.estimate { background: #fff6e6; color: #a56c00; border-color: #f2dcae; }
+
+        .gcash-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 16px; background: #f0f9ff;
+            font-size: 12px; color: #4a8caa; border-top: 1px solid #e0f0fa;
+        }
+        .gcash-row.no-gcash { background: #fafafa; color: #bbb; border-top: 1px solid #f0f0f0; }
+        .view-gcash-btn {
+            margin-left: auto; font-size: 11px; font-weight: 700;
+            padding: 4px 12px; border-radius: 6px;
+            background: #5bc8f5; color: #fff; border: none; cursor: pointer;
+            transition: background .15s;
+        }
+        .view-gcash-btn:hover { background: #38aad4; }
+
+        /* ── STATUS CHANGER ───────────────────────────────────────────── */
+        .status-changer {
+            padding: 10px 16px 12px;
+            border-top: 1px solid #f0f2f8;
+            background: #fafbff;
+        }
+        .status-changer-label {
+            font-size: 11px; font-weight: 700; color: #8a96b0;
+            text-transform: uppercase; letter-spacing: .5px;
+            margin-bottom: 8px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 6px;
+        }
+        .status-btn {
+            padding: 8px 10px; border-radius: 9px;
+            border: 1.5px solid transparent;
+            font-size: 12px; font-weight: 600;
+            cursor: pointer; text-align: center;
+            transition: all .15s;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+        }
+        .status-btn:not([disabled]):hover { filter: brightness(.93); }
+        .status-btn.current { box-shadow: 0 0 0 2px #1a1a2e; }
+        .status-btn[disabled] { cursor: not-allowed; }
+
+        .status-btn.s-pending    { background: #fff3cd; color: #856404; border-color: #f5d478; }
+        .status-btn.s-to-ship    { background: #d1ecf1; color: #0c5460; border-color: #9eddea; }
+        .status-btn.s-to-receive { background: #cce5ff; color: #004085; border-color: #9ecfff; }
+        .status-btn.s-reserved   { background: #fde8d8; color: #7d3c00; border-color: #f5c6a0; }
+        .status-btn.s-delivered  { background: #d0f0e8; color: #0a5940; border-color: #7dd8bc; }
+
+        /* Locked state */
+        .status-btn.is-locked {
+            opacity: 0.35;
+            cursor: not-allowed;
+            filter: grayscale(40%);
+        }
+
+        /* ── LOCKED NOTICE BANNER ────────────────────────────────────── */
+        .locked-notice {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px; font-weight: 600;
+        }
+        .locked-notice.delivered-lock {
+            background: #edfaf3; color: #0a5940;
+            border: 1px solid #7dd8bc;
+        }
+        .locked-notice.reserved-lock {
+            background: #fff3e0; color: #7d3c00;
+            border: 1px solid #f5c6a0;
+        }
+        /* unlocked reservation notice */
+        .locked-notice.reserved-unlocked {
+            background: #edfaf3; color: #0a5940;
+            border: 1px solid #7dd8bc;
+            animation: unlockPulse 2s ease-in-out 3;
+        }
+        /* NEW: reservation auto-advanced to to-ship notice */
+        .locked-notice.res-to-ship-lock {
+            background: #e8f8ff; color: #0c5460;
+            border: 1px solid #9eddea;
+            animation: unlockPulse 2s ease-in-out 3;
+        }
+        @keyframes unlockPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(39,174,96,0.3); }
+            50%       { box-shadow: 0 0 0 6px rgba(39,174,96,0); }
+        }
+        .locked-notice.rejected-lock {
+            background: #f8eeff; color: #5c007a;
+            border: 1px solid #d9a0f5;
+        }
+        /* NEW: pending sequential-lock notice */
+        .locked-notice.pending-seq-lock {
+            background: #fff9e6; color: #856404;
+            border: 1px solid #f5d478;
+        }
+        /* NEW: to-ship locked-until-rider-accepts notice */
+        .locked-notice.toship-rider-lock {
+            background: #e8f4ff; color: #0c5460;
+            border: 1px solid #9eddea;
+        }
+
+        /* ── REJECT BUTTON ROW (for regular orders) ──────────────────── */
+        .reject-row {
+            padding: 10px 16px 14px;
+            border-top: 1px solid #f0f2f8;
+            background: #fefaff;
+            display: flex; align-items: center; justify-content: flex-end;
+        }
+        .btn-reject {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 20px; border-radius: 9px;
+            background: #f8eeff; color: #7b00a8;
+            border: 1.5px solid #d9a0f5;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: background .15s, transform .1s, box-shadow .15s;
+        }
+        .btn-reject:hover  { background: #f0d6ff; box-shadow: 0 2px 8px rgba(155,48,208,.18); }
+        .btn-reject:active { transform: scale(.97); }
+
+        /* ── RESERVATION APPROVE / REJECT ROW ────────────────────────── */
+        .reservation-action-row {
+            padding: 12px 16px 14px;
+            border-top: 1px solid #f0f2f8;
+            background: linear-gradient(135deg, #fffdf5 0%, #fff8ec 100%);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .reservation-action-label {
+            font-size: 11px; font-weight: 700; color: #b05e00;
+            text-transform: uppercase; letter-spacing: .5px;
+            flex-shrink: 0;
+        }
+        .btn-approve-reservation {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 18px; border-radius: 9px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: #fff;
+            border: none;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: opacity .15s, transform .1s, box-shadow .15s;
+            box-shadow: 0 2px 8px rgba(39,174,96,.25);
+        }
+        .btn-approve-reservation:hover  { opacity: .88; box-shadow: 0 4px 14px rgba(39,174,96,.35); }
+        .btn-approve-reservation:active { transform: scale(.97); }
+
+        .btn-reject-reservation {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 18px; border-radius: 9px;
+            background: #fff0f0; color: #c0392b;
+            border: 1.5px solid #f5c6c6;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: background .15s, transform .1s, box-shadow .15s;
+        }
+        .btn-reject-reservation:hover  { background: #fddede; box-shadow: 0 2px 8px rgba(192,57,43,.18); }
+        .btn-reject-reservation:active { transform: scale(.97); }
+
+        /* ── RESERVATION REJECTED NOTICE ─────────────────────────────── */
+        .res-rejected-notice {
+            margin: 0 16px 12px;
+            padding: 10px 14px;
+            background: #fff5f5;
+            border: 1px solid #f5c6c6;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #c0392b;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .res-rejected-notice .rn-icon { font-size: 16px; flex-shrink: 0; }
+        .res-rejected-notice strong { display: block; font-size: 13px; margin-bottom: 2px; }
+
+        /* ── REJECTED NOTICE (on card, for regular orders) ───────────── */
+        .rejected-notice {
+            margin: 0 16px 12px;
+            padding: 10px 14px;
+            background: #f8eeff;
+            border: 1px solid #d9a0f5;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #5c007a;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .rejected-notice .rn-icon { font-size: 16px; flex-shrink: 0; }
+        .rejected-notice strong { display: block; font-size: 13px; margin-bottom: 2px; }
+
+        /* ── DELETE BUTTON ───────────────────────────────────────────── */
+        .delete-row {
+            padding: 10px 16px 14px;
+            border-top: 1px solid #f0f2f8;
+            background: #fffafa;
+            display: flex; align-items: center; justify-content: flex-end;
+        }
+        .btn-delete {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 18px; border-radius: 8px;
+            background: #fff0f0; color: #c0392b;
+            border: 1.5px solid #f5c6c6;
+            font-size: 12px; font-weight: 700;
+            cursor: pointer; transition: background .15s, transform .1s;
+        }
+        .btn-delete:hover  { background: #fddede; }
+        .btn-delete:active { transform: scale(.97); }
+
+        /* ── MODAL ───────────────────────────────────────────────────── */
+        .img-modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.65); z-index: 999;
+            align-items: center; justify-content: center;
+        }
+        .img-modal-overlay.open { display: flex; }
+        .img-modal-box {
+            background: #fff; border-radius: 16px; padding: 20px;
+            max-width: 90vw; max-height: 90vh;
+            display: flex; flex-direction: column; align-items: center; gap: 12px;
+            position: relative;
+        }
+        .img-modal-close {
+            position: absolute; top: 12px; right: 14px;
+            background: none; border: none; font-size: 18px;
+            cursor: pointer; color: #888;
+        }
+        .img-modal-label { font-size: 14px; font-weight: 700; color: #333; }
+        .img-modal-sub { font-size: 11.5px; color: #999; margin-top: -8px; }
+        .img-modal-box img { max-width: 70vw; max-height: 65vh; border-radius: 10px; object-fit: contain; }
+
+        /* Delete / Reject confirm modal */
+        .del-modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.5); z-index: 998;
+            align-items: flex-end; justify-content: center;
+        }
+        .del-modal-overlay.open { display: flex; }
+        .del-modal-box {
+            background: #fff; border-radius: 20px 20px 0 0;
+            padding: 24px 24px 36px; width: 100%; max-width: 480px;
+            animation: slideUp .25s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to   { transform: translateY(0); }
+        }
+        .del-modal-handle {
+            width: 40px; height: 4px; border-radius: 3px;
+            background: #e0e0e0; margin: 0 auto 18px;
+        }
+        .del-modal-title { font-size: 17px; font-weight: 800; color: #1a1a2e; margin-bottom: 6px; }
+        .del-modal-sub   { font-size: 13px; color: #777; margin-bottom: 20px; line-height: 1.5; }
+        .del-modal-btns  { display: flex; gap: 10px; }
+        .del-modal-cancel {
+            flex: 1; padding: 12px; border-radius: 12px;
+            border: 1.5px solid #dde3ef; background: #f4f6f9;
+            font-size: 14px; font-weight: 700; color: #5a6a8a; cursor: pointer;
+        }
+        .del-modal-confirm {
+            flex: 2; padding: 12px; border-radius: 12px; border: none;
+            font-size: 14px; font-weight: 700;
+            cursor: pointer; transition: opacity .15s;
+        }
+        .del-modal-confirm.is-delete {
+            background: linear-gradient(135deg, #c0392b, #e74c3c);
+            color: #fff;
+        }
+        .del-modal-confirm.is-reject {
+            background: linear-gradient(135deg, #7b00a8, #9b30d0);
+            color: #fff;
+        }
+        .del-modal-confirm.is-approve {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: #fff;
+        }
+        .del-modal-confirm.is-res-reject {
+            background: linear-gradient(135deg, #c0392b, #e74c3c);
+            color: #fff;
+        }
+        .del-modal-confirm:hover { opacity: .88; }
+        .del-modal-confirm:disabled { opacity: .5; cursor: not-allowed; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(60px);
+            background: #1a1a2e; color: #fff; padding: 11px 24px;
+            border-radius: 30px; font-size: 13px; font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2);
+            transition: transform .3s ease, opacity .3s ease; opacity: 0; z-index: 1000;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+
+    <div class="page-header">
+        <h1 class="page-title">🧾 Order Approval</h1>
+        <p class="page-sub" id="sellerStore">—</p>
+    </div>
+
+    <div class="stats-strip" id="statsStrip">
+        <div class="stat-pill"><span class="stat-num" id="statAll">0</span><span class="stat-label">Total Orders</span></div>
+        <div class="stat-pill stat-pending"><span class="stat-num" id="statPending">0</span><span class="stat-label">Pending</span></div>
+        <div class="stat-pill stat-toship"><span class="stat-num" id="statToShip">0</span><span class="stat-label">To Ship</span></div>
+        <div class="stat-pill stat-toreceive"><span class="stat-num" id="statToReceive">0</span><span class="stat-label">To Receive</span></div>
+        <div class="stat-pill stat-delivered"><span class="stat-num" id="statDelivered">0</span><span class="stat-label">Delivered</span></div>
+    </div>
+
+    <div class="controls">
+        <div class="search-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search by item or customer..." oninput="renderOrders()">
+        </div>
+        <div class="filter-tabs" id="filterTabs">
+            <button class="tab active" onclick="setFilter('all', this)">All</button>
+            <button class="tab" onclick="setFilter('pending', this)">Pending</button>
+            <button class="tab" onclick="setFilter('to-ship', this)">To Ship</button>
+            <button class="tab" onclick="setFilter('to-receive', this)">To Receive</button>
+            <button class="tab" onclick="setFilter('reserved', this)">Reserved</button>
+            <button class="tab" onclick="setFilter('delivered', this)">Delivered</button>
+            <button class="tab" onclick="setFilter('cancelled', this)">Cancelled</button>
+            <button class="tab" onclick="setFilter('rejected', this)">Rejected</button>
+        </div>
+    </div>
+
+    <div class="order-list" id="orderList">
+        <p class="loading">Loading orders...</p>
+    </div>
+
+    <!-- GCash Screenshot / Delivery Proof Modal (shared) -->
+    <div class="img-modal-overlay" id="imgModalOverlay" onclick="closeImgModal()">
+        <div class="img-modal-box" onclick="event.stopPropagation()">
+            <button class="img-modal-close" onclick="closeImgModal()">&#10005;</button>
+            <p class="img-modal-label" id="imgModalLabel">GCash Payment Screenshot</p>
+            <p class="img-modal-sub" id="imgModalSub" style="display:none;"></p>
+            <img id="imgModalSrc" src="" alt="Proof photo">
+        </div>
+    </div>
+
+    <!-- Order Receipt Modal (printable) -->
+    <div class="img-modal-overlay" id="receiptModalOverlay" onclick="closeReceiptModal(event)">
+        <div class="img-modal-box" id="receiptPrintArea" onclick="event.stopPropagation()" style="max-width:640px; width:92vw; background:#fff; padding:0; overflow:hidden;">
+            <button class="img-modal-close no-print" onclick="closeReceiptModal()" style="font-size:24px; top:16px; right:18px;">&#10005;</button>
+            <div style="padding:44px 0 32px; font-family:'Segoe UI',sans-serif;">
+                <div style="text-align:center; margin-bottom:26px;">
+                    <div style="font-size:32px; font-weight:800; color:#1a1a2e;">KANTO SWEETS</div>
+                    <div style="font-size:17px; color:#888;">Order Receipt</div>
+                </div>
+                <div style="border-top:2px dashed #ccc; border-bottom:2px dashed #ccc; padding:20px 0; margin-bottom:20px; font-size:19px; color:#444;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>Receipt No.</span><strong id="rcNo">—</strong></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>Date</span><strong id="rcDate">—</strong></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Order type</span><strong id="rcType">—</strong></div>
+                </div>
+                <div style="font-size:19px; color:#444; margin-bottom:20px;">
+                    <div style="margin-bottom:10px;"><strong>Seller:</strong> <span id="rcSeller">—</span></div>
+                    <div style="margin-bottom:10px;"><strong>Customer:</strong> <span id="rcCustomer">—</span></div>
+                    <div id="rcAddressRow" style="margin-bottom:10px;"><strong>Deliver to:</strong> <span id="rcAddress">—</span></div>
+                </div>
+                <div style="border-top:2px dashed #ccc; padding-top:18px; margin-bottom:18px; font-size:19px; color:#333;">
+                    <div style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:10px;">
+                        <span id="rcItemName" style="max-width:380px;">—</span><span id="rcQty">—</span>
+                    </div>
+                </div>
+                <div style="border-top:2px dashed #ccc; padding-top:18px; font-size:19px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>Payment method</span><strong id="rcPayment">—</strong></div>
+                    <div style="display:flex; justify-content:space-between; font-size:26px; font-weight:800; color:#1a1a2e;"><span>Total</span><span id="rcTotal">₱0</span></div>
+                </div>
+                <div style="text-align:center; font-size:15px; color:#aaa; margin-top:26px;">
+                    Handed to rider as proof of order details.<br>Keep this receipt for reference.
+                </div>
+                <button class="no-print" onclick="window.print()" style="width:100%; margin-top:26px; padding:16px; border:none; border-radius:10px; background:#1a1a2e; color:#fff; font-weight:700; font-size:18px; cursor:pointer;">🖨️ Print receipt</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #receiptPrintArea, #receiptPrintArea * { visibility: visible; }
+            #receiptPrintArea { position: fixed; inset: 0; margin: auto; box-shadow: none; }
+            .no-print { display: none !important; }
+        }
+    </style>
+
+    <!-- Shared Action Modal (Delete, Reject, Approve Reservation, Reject Reservation) -->
+    <div class="del-modal-overlay" id="delModalOverlay">
+        <div class="del-modal-box">
+            <div class="del-modal-handle"></div>
+            <div class="del-modal-title" id="delModalTitle">🗑️ Delete Order?</div>
+            <div class="del-modal-sub" id="delModalSub">
+                This will permanently remove this order from your records.
+                This action <strong>cannot be undone</strong>.
+            </div>
+            <div class="del-modal-btns">
+                <button class="del-modal-cancel" onclick="closeDelModal()">Cancel</button>
+                <button class="del-modal-confirm is-delete" id="delConfirmBtn">🗑️ Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+<script type="module">
+import { getOrdersBySeller, updateOrderStatus, getAllStores, db } from "./db.js";
+import {
+    doc, deleteDoc, updateDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const currentSeller = localStorage.getItem("currentSeller");
+if (!currentSeller) {
+    alert("Please login as seller first.");
+    window.location.href = "seller login.html";
+    throw new Error("stop");
+}
+
+// Load store name
+try {
+    const stores = await getAllStores();
+    const myStore = stores.find(s => s.seller === currentSeller);
+    document.getElementById("sellerStore").innerText = myStore ? myStore.name : currentSeller;
+} catch(e) {
+    document.getElementById("sellerStore").innerText = currentSeller;
+}
+
+let currentFilter    = "all";
+let allOrdersCache   = [];
+let prevCancelledIds = new Set();
+let pendingDeleteId  = null;
+let pendingRejectId  = null;
+
+// ── Reservation action pending IDs ────────────────────────────────────────
+let pendingApproveResId = null;
+let pendingRejectResId  = null;
+
+const screenshotStore = {};
+
+// ── Status definitions ─────────────────────────────────────────────────────
+const ALL_STATUSES = [
+    { key: "pending",    label: "Pending",    icon: "🕐", cls: "s-pending"    },
+    { key: "to-ship",    label: "To Ship",    icon: "📦", cls: "s-to-ship"    },
+    { key: "to-receive", label: "To Receive", icon: "🚚", cls: "s-to-receive" },
+    { key: "delivered",  label: "Delivered",  icon: "✅", cls: "s-delivered"  },
+    { key: "reserved",   label: "Reserved",   icon: "📅", cls: "s-reserved"   },
+];
+
+const TERMINAL_STATUSES = new Set(["delivered", "rejected", "cancelled"]);
+
+// ── Sequential flow for regular (non-reservation) orders ──────────────────
+// Defines what the single "next" unlockable status is for a given current
+// status, so the seller can only move one step forward at a time instead
+// of jumping around freely.
+//
+// NOTE: "to-ship" is intentionally NOT in this map anymore. Once an order
+// reaches "to-ship", ALL status buttons are locked for the seller — the
+// order can only move to "to-receive" automatically, when a rider accepts
+// the delivery request (see acceptRiderRequest() in db.js, which flips
+// status to "to-receive" itself). The seller can no longer manually click
+// "To Receive" from a "To Ship" order.
+const NEXT_STATUS_MAP = {
+    "pending":    "to-ship",
+    "to-receive": "delivered",
+};
+
+// ── Delivery fee pill (shows what the rider will earn for this delivery) ──
+// Fee/distance were already computed and saved on the order doc at
+// checkout (see computeDeliveryFee() in db.js, called from payment.html).
+// Same markup/logic as request-rider.html and rider-dashboard.html so the
+// seller sees the exact same number the rider will see once assigned.
+function feeDistancePillHtml(order) {
+    if (order.deliveryFee == null) return "";
+    if (order.deliveryFeeMethod === "distance" && order.deliveryDistanceKm != null) {
+        return `<span class="fee-pill">🛵 ₱${order.deliveryFee} · ${order.deliveryDistanceKm} km</span>`;
+    }
+    return `<span class="fee-pill estimate">🛵 ₱${order.deliveryFee} (est.)</span>`;
+}
+
+// ── Helper: check if reservation date has arrived ─────────────────────────
+function isReservationDateReached(order) {
+    const resDateStr = order.reserveDate || order.date;
+    if (!resDateStr) return false;
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const resDate = new Date(resDateStr);
+        resDate.setHours(0, 0, 0, 0);
+        return today >= resDate;
+    } catch(e) {
+        return false;
+    }
+}
+
+// ── Load ───────────────────────────────────────────────────────────────────
+async function loadOrders() {
+    try {
+        const fresh = await getOrdersBySeller(currentSeller);
+
+        const newCancelledIds = new Set(
+            fresh.filter(o => o.status === "cancelled").map(o => o.id)
+        );
+        const brandNew = [...newCancelledIds].filter(id => !prevCancelledIds.has(id));
+
+        if (brandNew.length > 0 && prevCancelledIds.size > 0) {
+            brandNew.forEach(id => {
+                const order = fresh.find(o => o.id === id);
+                const name  = order?.name || "an item";
+                const cust  = order?.customerUsername || order?.customer || "A customer";
+                showCancelNotification(`${cust} cancelled their order for "${name}".`);
+            });
+        }
+
+        prevCancelledIds = newCancelledIds;
+
+        // ── AUTO-ADVANCE: reserved → to-ship when date is reached ─────
+        // Check each reservation order with status "reserved" and auto-advance if date arrived
+        const autoAdvancePromises = fresh
+            .filter(o =>
+                o.type === "reservation" &&
+                o.status === "reserved" &&
+                isReservationDateReached(o)
+            )
+            .map(async (order) => {
+                try {
+                    await updateOrderStatus(order.id, "to-ship");
+                    // Update local copy so re-render is correct immediately
+                    order.status = "to-ship";
+                    showToast(`📦 "${order.name || 'Reservation'}" auto-advanced to To Ship!`);
+                } catch(e) {
+                    console.error("Auto-advance failed for order", order.id, e);
+                }
+            });
+
+        if (autoAdvancePromises.length > 0) {
+            await Promise.all(autoAdvancePromises);
+        }
+
+        allOrdersCache = fresh;
+
+        fresh.forEach(order => {
+            if (order.gcashScreenshot) screenshotStore[order.id] = order.gcashScreenshot;
+        });
+
+    } catch(e) {
+        console.error("Failed to load orders:", e);
+        allOrdersCache = [];
+    }
+    renderOrders();
+    updateCancelledTabBadge();
+    updateStatsStrip();
+}
+
+// ── Stats strip (online-shop-style order summary) ──────────────────────────
+function updateStatsStrip() {
+    const count = (key) => allOrdersCache.filter(o => (o.status || "pending") === key).length;
+    document.getElementById("statAll").textContent        = allOrdersCache.length;
+    document.getElementById("statPending").textContent    = count("pending");
+    document.getElementById("statToShip").textContent     = count("to-ship");
+    document.getElementById("statToReceive").textContent  = count("to-receive");
+    document.getElementById("statDelivered").textContent  = count("delivered");
+}
+
+// ── Cancelled badge ────────────────────────────────────────────────────────
+function updateCancelledTabBadge() {
+    const count = allOrdersCache.filter(o => o.status === "cancelled").length;
+    document.querySelectorAll(".tab").forEach(tab => {
+        const oldBadge = tab.querySelector(".tab-badge");
+        if (oldBadge) oldBadge.remove();
+        const labelText = tab.childNodes[0]?.textContent?.trim() || tab.textContent.trim();
+        if (labelText === "Cancelled" && count > 0) {
+            const badge = document.createElement("span");
+            badge.className  = "tab-badge";
+            badge.textContent = count;
+            tab.appendChild(badge);
+        }
+    });
+}
+
+// ── Cancel popup ───────────────────────────────────────────────────────────
+function showCancelNotification(msg) {
+    const existing = document.getElementById("cancelNotif");
+    if (existing) existing.remove();
+    const notif = document.createElement("div");
+    notif.id = "cancelNotif";
+    notif.style.cssText = `
+        position:fixed;top:20px;left:50%;transform:translateX(-50%);
+        background:#e74c3c;color:#fff;padding:14px 22px;border-radius:14px;
+        font-size:13px;font-weight:600;box-shadow:0 6px 24px rgba(231,76,60,.35);
+        z-index:1001;max-width:90vw;text-align:center;
+        animation:slideDown .35s ease;display:flex;align-items:center;gap:10px;
+    `;
+    notif.innerHTML = `
+        <style>@keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}</style>
+        <span style="font-size:18px;">🚫</span><span>${msg}</span>
+    `;
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), 5000);
+}
+
+// ── Filter ─────────────────────────────────────────────────────────────────
+window.setFilter = function(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+    renderOrders();
+};
+
+// ── Render ─────────────────────────────────────────────────────────────────
+window.renderOrders = function() {
+    const query = document.getElementById("searchInput").value.trim().toLowerCase();
+    let orders  = [...allOrdersCache];
+
+    if (currentFilter !== "all") {
+        orders = orders.filter(o => o.status === currentFilter);
+    }
+    if (query) {
+        orders = orders.filter(o =>
+            (o.name || "").toLowerCase().includes(query) ||
+            (o.customerUsername || o.customer || "").toLowerCase().includes(query)
+        );
+    }
+
+    const list = document.getElementById("orderList");
+    list.innerHTML = "";
+
+    if (orders.length === 0) {
+        list.innerHTML = "<p class='empty'>No orders found.</p>";
+        return;
+    }
+
+    orders.forEach(order => {
+        const card = document.createElement("div");
+        card.classList.add("order-card");
+
+        const status        = order.status || "pending";
+        const isCancelled   = status === "cancelled";
+        const isRejected    = status === "rejected";
+        const isDelivered   = status === "delivered";
+        const isReserved    = status === "reserved";
+        const isTerminal    = TERMINAL_STATUSES.has(status);
+        const isReservation = order.type === "reservation";
+
+        // ── Reservation-specific state ─────────────────────────────────
+        const isResPending  = isReservation && status === "pending";
+        const isResRejected = isReservation && !!order.sellerRejectedReservation;
+
+        // ── Reservation auto-advanced to to-ship ───────────────────────
+        // This is a reservation that has already been advanced to "to-ship"
+        // (date has arrived). Pending & Delivered are locked for these.
+        const isResToShip   = isReservation && status === "to-ship";
+
+        // ── Regular (non-reservation) order sitting at "to-ship" ───────
+        // Fully locked: the seller cannot manually move it anywhere.
+        // It only advances to "to-receive" once a rider ACCEPTS the
+        // delivery request (acceptRiderRequest() in db.js sets
+        // status: "to-receive" itself).
+        const isToShipRiderLocked = !isReservation && status === "to-ship";
+
+        // ── Check if reservation date has been reached (for "reserved" status only) ──
+        const dateReached = isReserved ? isReservationDateReached(order) : false;
+
+        // ── Sequential (non-reservation) flow check ─────────────────────
+        // Regular orders move pending → to-ship, then to-receive → delivered,
+        // one locked step at a time: from any status in NEXT_STATUS_MAP,
+        // only the single "next" status button is clickable.
+        const isSequentialFlow = !isReservation && NEXT_STATUS_MAP.hasOwnProperty(status);
+
+        // ── Reject button: only for NON-reservation pending orders ─────
+        const canReject = status === "pending" && !isReservation;
+
+        if (isCancelled)  card.classList.add("is-cancelled");
+        if (isRejected)   card.classList.add("is-rejected");
+        if (isDelivered)  card.classList.add("is-delivered");
+        if (isReserved)   card.classList.add("is-reserved");
+        if (isResRejected) card.classList.add("is-res-rejected");
+
+        const statusInfo    = getStatusInfo(status);
+        const rawDate       = order.createdAt?.seconds
+            ? new Date(order.createdAt.seconds * 1000)
+            : order.createdAt ? new Date(order.createdAt) : null;
+        const displayDate   = rawDate
+            ? rawDate.toLocaleDateString("en-PH", { year:"numeric", month:"short", day:"numeric" })
+            : "—";
+        const hasScreenshot = !!screenshotStore[order.id];
+        const payMethod     = order.paymentMethod || "gcash";
+
+        // ── Status buttons ────────────────────────────────────────────
+        let lockedNotice = '';
+        if (isDelivered) {
+            lockedNotice = `<div class="locked-notice delivered-lock">🔒 Order delivered — status is final. Delete when done.</div>`;
+        } else if (isResToShip) {
+            // Reservation date arrived, auto-advanced to To Ship
+            const resDateDisplay = order.reserveDate || order.date || "the reserved date";
+            lockedNotice = `<div class="locked-notice res-to-ship-lock">📦 Reservation date (<strong>${resDateDisplay}</strong>) has arrived — order auto-advanced to <strong>To Ship</strong>. Pending is now open in case you need to revert it. Delivered stays locked.</div>`;
+        } else if (isToShipRiderLocked) {
+            // Regular order at "to-ship" — fully locked, waiting on a rider to accept
+            lockedNotice = `<div class="locked-notice toship-rider-lock">🔒 All statuses are locked while <strong>To Ship</strong>. This will move to <strong>To Receive</strong> automatically once a rider accepts the delivery request.</div>`;
+        } else if (isReserved && !dateReached) {
+            // LOCKED: reservation date not yet reached
+            const resDateDisplay = order.reserveDate || order.date || "the reserved date";
+            lockedNotice = `<div class="locked-notice reserved-lock">🔒 Status is locked until the reservation date (<strong>${resDateDisplay}</strong>). Buttons will auto-unlock on that day.</div>`;
+        } else if (isReserved && dateReached) {
+            // UNLOCKED: reservation date has arrived (this should rarely show since auto-advance happens on load)
+            lockedNotice = `<div class="locked-notice reserved-unlocked">🔓 Reservation date has arrived! You can now update the order status.</div>`;
+        } else if (isRejected) {
+            lockedNotice = `<div class="locked-notice rejected-lock">🚫 Order rejected by you — status is final. Delete when done.</div>`;
+        } else if (isCancelled) {
+            lockedNotice = `<div class="locked-notice" style="background:#fff0f0;color:#8b0000;border:1px solid #f5a0a0;">🚫 Order cancelled by customer — status is locked.</div>`;
+        } else if (isSequentialFlow) {
+            // Sequential lock: from the current status, only the single
+            // "next" status is open — everything else is locked.
+            const nextStepInfo = ALL_STATUSES.find(s => s.key === NEXT_STATUS_MAP[status]);
+            const nextLabel    = nextStepInfo ? nextStepInfo.label : NEXT_STATUS_MAP[status];
+            lockedNotice = `<div class="locked-notice pending-seq-lock">🔒 Only <strong>${nextLabel}</strong> is open from here. Other statuses unlock as the order moves forward.</div>`;
+        }
+
+        const statusButtons = ALL_STATUSES.map(s => {
+            const isCurrent = status === s.key;
+
+            // ── LOCKING LOGIC ──────────────────────────────────────────
+            let isButtonLocked;
+
+            if (isResToShip) {
+                // Reservation that auto-advanced to "to-ship":
+                // Once the reservation date has arrived, "Pending" unlocks
+                // (and STAYS unlocked permanently — it does not re-lock
+                // after the date passes). Only "delivered" stays locked,
+                // since that one is customer-confirmed.
+                isButtonLocked = (s.key === "delivered") && !isCurrent;
+            } else if (isToShipRiderLocked) {
+                // Regular order at "to-ship": lock EVERY status button.
+                // The only way forward is a rider accepting the delivery
+                // request, which flips status to "to-receive" on its own.
+                isButtonLocked = !isCurrent;
+            } else if (isReserved) {
+                if (!dateReached) {
+                    // Date not yet reached → lock everything except current
+                    isButtonLocked = !isCurrent;
+                } else {
+                    // Date reached → normal rules (delivered stays customer-only)
+                    isButtonLocked = s.key === "delivered" && !isReservation;
+                }
+            } else if (isSequentialFlow) {
+                // From the current status, only the immediate next step
+                // (per NEXT_STATUS_MAP) is open — everything else is locked.
+                const nextStep = NEXT_STATUS_MAP[status];
+                isButtonLocked = !isCurrent && s.key !== nextStep;
+            } else {
+                isButtonLocked = isTerminal ? !isCurrent : (s.key === "delivered" && !isReservation);
+            }
+
+            const isDisabled = isCurrent || isButtonLocked;
+
+            let title;
+            if (isButtonLocked && !isCurrent) {
+                if (isResToShip && s.key === "delivered") {
+                    title = "Set by customer when they confirm receipt";
+                } else if (isToShipRiderLocked) {
+                    title = "Locked — waiting for a rider to accept this delivery. Moves to To Receive automatically.";
+                } else if (isReserved && !dateReached) {
+                    title = `Locked until reservation date (${order.reserveDate || order.date || 'the reserved date'})`;
+                } else if (isTerminal) {
+                    title = `Order is ${status} — status is locked`;
+                } else if (isSequentialFlow) {
+                    const nextStepInfo = ALL_STATUSES.find(s2 => s2.key === NEXT_STATUS_MAP[status]);
+                    const nextLabel    = nextStepInfo ? nextStepInfo.label : NEXT_STATUS_MAP[status];
+                    title = `Move this order to '${nextLabel}' first`;
+                } else if (s.key === "delivered") {
+                    title = "Set by customer when they confirm receipt";
+                } else {
+                    title = "Auto-set when customer places a reservation";
+                }
+            } else {
+                title = `Set to ${s.label}`;
+            }
+
+            return `<button
+                class="status-btn ${s.cls}${isCurrent ? ' current' : ''}${isButtonLocked && !isCurrent ? ' is-locked' : ''}"
+                onclick="${(!isButtonLocked && !isCurrent) ? `changeStatus('${order.id}', '${s.key}')` : ''}"
+                title="${title}"
+                ${isDisabled ? 'disabled' : ''}
+            >${s.icon} ${s.label}${isButtonLocked && !isCurrent ? ' 🔒' : ''}</button>`;
+        }).join("");
+
+        // ── Reject row — ONLY for non-reservation pending orders ──────
+        const rejectRow = canReject ? `
+            <div class="reject-row">
+                <button class="btn-reject" onclick="openRejectModal('${order.id}')">
+                    🚫 Reject Order
+                </button>
+            </div>` : '';
+
+        // ── Reservation Approve/Reject row — for pending reservations ──
+        let reservationActionRow = '';
+        if (isResRejected) {
+            reservationActionRow = `
+                <div class="res-rejected-notice">
+                    <div class="rn-icon">❌</div>
+                    <div>
+                        <strong>Reservation Rejected by You</strong>
+                        You have rejected this reservation. The customer has been notified.
+                    </div>
+                </div>
+`;
+        } else if (isResPending) {
+            reservationActionRow = `
+                <div class="reservation-action-row">
+                    <span class="reservation-action-label">📅 Reservation</span>
+                    <button class="btn-approve-reservation" onclick="openApproveResModal('${order.id}')">
+                        ✅ Approve
+                    </button>
+                    <button class="btn-reject-reservation" onclick="openRejectResModal('${order.id}')">
+                        ❌ Reject
+                    </button>
+                </div>`;
+        }
+
+        // ── Delete row — show for delivered, rejected, AND cancelled ─
+        const deleteRow = (isDelivered || isRejected || isCancelled) ? `
+            <div class="delete-row">
+                <button class="btn-delete" onclick="openDelModal('${order.id}')">
+                    🗑️ Delete Order
+                </button>
+            </div>` : '';
+
+        // ── Rejected notice banner (non-reservation orders) ───────────
+        const rejectedBanner = isRejected ? `
+            <div class="rejected-notice">
+                <div class="rn-icon">🚫</div>
+                <div>
+                    <strong>Order Rejected by You</strong>
+                    You have rejected this order. The customer has been notified.
+                </div>
+            </div>` : '';
+
+        // ── Rider delivery-proof indicator (rider-side only marker) ────
+        // riderDeliveryStatus is set by the rider once they submit their
+        // proof photo. It does NOT touch order.status (that stays under
+        // the seller's manual control here), so we surface it as its own
+        // small note instead of pretending the whole order is "delivered".
+        const riderDelivered = order.riderDeliveryStatus === "delivered";
+
+        card.innerHTML = `
+            <div class="order-card-top">
+                <div class="order-meta">
+                    <span class="order-type-badge ${isReservation ? 'reserve-badge' : 'order-badge'}">
+                        ${isReservation ? '📅 Reservation' : '🛒 Order'}
+                    </span>
+                    <span class="status-badge" style="background:${statusInfo.bg}; color:${statusInfo.color};">
+                        ${statusInfo.label}
+                    </span>
+                    <button class="view-gcash-btn" style="background:#1a1a2e;" onclick="viewReceipt('${order.id}')">🧾 Receipt</button>
+                </div>
+                <span class="order-date">${displayDate}</span>
+            </div>
+
+            <div class="order-body">
+                <img class="order-img" src="${order.image || ''}" alt="${order.name || 'Item'}">
+                <div class="order-info">
+                    <h3 class="order-name">${order.name || '—'}</h3>
+                    <p class="order-detail">Size: <strong>${order.size || '—'}</strong> &nbsp;|&nbsp; Qty: <strong>${order.qty || 1}</strong></p>
+                    <p class="order-detail">Price: <strong class="order-price">₱${(parseFloat(order.price || 0) * (order.qty || 1)).toFixed(0)}</strong></p>
+                    <p class="order-detail">Payment: <strong>${payMethod === "cod" ? "💵 Cash on Delivery" : "📱 GCash"}</strong></p>
+                    <p class="order-customer">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        ${order.customerUsername || order.customer || '—'}
+                    </p>
+                    ${order.address ? `<p class="order-detail">📍 ${order.address.street || ''}, ${order.address.city || ''}</p>` : ''}
+                    ${(isReservation && (order.reserveDate || order.date)) ? `<p class="order-detail" style="margin-top:5px; padding:5px 10px; background:#fff8ee; border:1px solid #f5d9a8; border-radius:8px; display:inline-flex; align-items:center; gap:5px; font-size:12px;">📅 Reserve Date: <strong style="color:#b05e00;">${order.reserveDate || order.date}</strong></p>` : ''}
+                    ${order.referenceNum ? `<p class="order-detail">Ref #: <strong>${order.referenceNum}</strong></p>` : ''}
+                    <div>${feeDistancePillHtml(order)}</div>
+                </div>
+            </div>
+
+            ${isCancelled ? `
+                <div class="cancelled-notice">
+                    <div class="cn-icon">🚫</div>
+                    <div>
+                        <strong>Order Cancelled by Customer</strong>
+                        This order was cancelled by the customer. No action needed.
+                    </div>
+                </div>` : ''}
+
+            ${rejectedBanner}
+
+            ${payMethod !== "cod" ? (hasScreenshot
+                ? `<div class="gcash-row" style="background:${order.paymentVerified ? '#e6f7f0' : '#fff8ec'}; border-top:1px solid ${order.paymentVerified ? '#c9ecdd' : '#f5d9a8'};">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${order.paymentVerified ? '#0a5940' : '#b05e00'}" stroke-width="2.5">
+                            ${order.paymentVerified
+                                ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
+                                : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}
+                        </svg>
+                        <span style="color:${order.paymentVerified ? '#0a5940' : '#b05e00'};">${order.paymentVerified ? "Check the Payment ✓" : "Awaiting your verification"}</span>
+                        <button class="view-gcash-btn" style="background:#2ec4a6;" onclick="viewGcash('${order.id}')">View Proof</button>
+                        ${!order.paymentVerified ? `<button class="view-gcash-btn" style="background:#27ae60; margin-left:6px;" onclick="markPaymentVerified('${order.id}')">✓ Mark Verified</button>` : ''}
+                </div>`
+                : `<div class="gcash-row no-gcash">No payment screenshot uploaded</div>`)
+            : `<div class="gcash-row no-gcash">💵 Cash on Delivery — no screenshot needed</div>`}
+
+            ${order.deliveryProof
+                ? `<div class="gcash-row" style="background:#e6f7f0; border-top:1px solid #c9ecdd;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a5940" stroke-width="2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                        </svg>
+                        <span style="color:#0a5940;">
+                            ${riderDelivered ? "✅ Delivered — proof by " : "Delivery proof by "}${order.deliveredByRider || 'rider'}
+                        </span>
+                        <button class="view-gcash-btn" style="background:#2ec4a6;" onclick="viewDeliveryProof('${order.id}')">View</button>
+                   </div>`
+                : ''}
+
+            <div class="status-changer">
+                <div class="status-changer-label">Set Order Status</div>
+                ${lockedNotice}
+                <div class="status-grid">${statusButtons}</div>
+            </div>
+
+            ${reservationActionRow}
+            ${rejectRow}
+            ${deleteRow}
+        `;
+
+        list.appendChild(card);
+    });
+};
+
+// ── GCash modal ────────────────────────────────────────────────────────────
+window.viewGcash = function(orderId) {
+    const src = screenshotStore[orderId];
+    if (!src) { alert("Screenshot not found."); return; }
+    document.getElementById("imgModalLabel").textContent = "GCash Payment Screenshot";
+    document.getElementById("imgModalSub").style.display = "none";
+    document.getElementById("imgModalSrc").alt = "GCash Screenshot";
+    document.getElementById("imgModalSrc").src = src;
+    document.getElementById("imgModalOverlay").classList.add("open");
+};
+window.closeImgModal = function() {
+    document.getElementById("imgModalOverlay").classList.remove("open");
+    document.getElementById("imgModalSrc").src = "";
+};
+
+// ── Delivery proof modal (reuses the same image modal, but with its own
+//    label + rider/date sub-caption so it's clearly not the GCash modal) ──
+window.viewDeliveryProof = function(orderId) {
+    const order = allOrdersCache.find(o => o.id === orderId);
+    if (!order || !order.deliveryProof) { alert("Delivery proof not found."); return; }
+
+    const riderName = order.deliveredByRider || "rider";
+    const ts = order.proofSubmittedAt?.seconds
+        ? new Date(order.proofSubmittedAt.seconds * 1000).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+        : "";
+
+    document.getElementById("imgModalLabel").textContent = "📦 Delivery Proof Photo";
+    const sub = document.getElementById("imgModalSub");
+    sub.textContent = `Submitted by ${riderName}${ts ? " · " + ts : ""}`;
+    sub.style.display = "block";
+    document.getElementById("imgModalSrc").alt = "Delivery proof photo";
+    document.getElementById("imgModalSrc").src = order.deliveryProof;
+    document.getElementById("imgModalOverlay").classList.add("open");
+};
+
+// ── Receipt modal (printable order receipt) ─────────────────────────────────
+window.viewReceipt = function(orderId) {
+    const order = allOrdersCache.find(o => o.id === orderId);
+    if (!order) { alert("Order not found."); return; }
+
+    const isReservation = order.type === "reservation";
+    const qty   = order.qty || 1;
+    const total = (parseFloat(order.price || 0) * qty).toFixed(0);
+    const payMethod = order.paymentMethod || "gcash";
+
+    const rawDate = order.createdAt?.seconds
+        ? new Date(order.createdAt.seconds * 1000)
+        : order.createdAt ? new Date(order.createdAt) : new Date();
+    const dateDisplay = rawDate.toLocaleDateString("en-PH", { year:"numeric", month:"short", day:"numeric" })
+        + " " + rawDate.toLocaleTimeString("en-PH", { hour:"2-digit", minute:"2-digit" });
+
+    document.getElementById("rcNo").textContent       = "#" + orderId.slice(-8).toUpperCase();
+    document.getElementById("rcDate").textContent      = dateDisplay;
+    document.getElementById("rcType").textContent      = isReservation ? "📅 Reservation" : "🛒 Regular Order";
+    document.getElementById("rcSeller").textContent    = document.getElementById("sellerStore").innerText || "—";
+    document.getElementById("rcCustomer").textContent  = order.customerUsername || order.customer || "—";
+
+    const addressRow = document.getElementById("rcAddressRow");
+    if (order.address && (order.address.street || order.address.city)) {
+        document.getElementById("rcAddress").textContent =
+            [order.address.street, order.address.city].filter(Boolean).join(", ");
+        addressRow.style.display = "";
+    } else {
+        addressRow.style.display = "none";
+    }
+
+    document.getElementById("rcItemName").textContent = order.name || "—";
+    document.getElementById("rcQty").textContent       = "x" + qty;
+    document.getElementById("rcPayment").textContent   = payMethod === "cod" ? "Cash on Delivery" : "GCash";
+    document.getElementById("rcTotal").textContent     = "₱" + total;
+
+    document.getElementById("receiptModalOverlay").classList.add("open");
+};
+
+window.closeReceiptModal = function(e) {
+    if (e) e.stopPropagation();
+    document.getElementById("receiptModalOverlay").classList.remove("open");
+};
+
+// ── Delete modal ───────────────────────────────────────────────────────────
+window.openDelModal = function(orderId) {
+    pendingDeleteId   = orderId;
+    pendingRejectId   = null;
+    pendingApproveResId = null;
+    pendingRejectResId  = null;
+
+    const order = allOrdersCache.find(o => o.id === orderId);
+    const isRej = order?.status === "rejected";
+    const isResRej = order?.type === "reservation" && !!order?.sellerRejectedReservation;
+    const isCan = order?.status === "cancelled";
+    const title = document.getElementById("delModalTitle");
+    const sub   = document.getElementById("delModalSub");
+    const btn   = document.getElementById("delConfirmBtn");
+
+    if (isResRej) {
+        title.textContent = "🗑️ Delete Reservation?";
+        sub.innerHTML = `This will permanently remove this rejected reservation from your records. This action <strong>cannot be undone</strong>.`;
+    } else if (isRej) {
+        title.textContent = "🗑️ Delete Rejected Order?";
+        sub.innerHTML = `This will permanently remove this rejected order from your records. This action <strong>cannot be undone</strong>.`;
+    } else if (isCan) {
+        title.textContent = "🗑️ Delete Cancelled Order?";
+        sub.innerHTML = `This will permanently remove this cancelled order from your records. This action <strong>cannot be undone</strong>.`;
+    } else {
+        title.textContent = "🗑️ Delete Order?";
+        sub.innerHTML = `This will permanently remove this delivered order from your records. This action <strong>cannot be undone</strong>.`;
+    }
+    btn.textContent = "🗑️ Yes, Delete";
+    btn.className = "del-modal-confirm is-delete";
+    document.getElementById("delModalOverlay").classList.add("open");
+};
+
+// ── Reject modal (non-reservation orders) ────────────────────────────────
+window.openRejectModal = function(orderId) {
+    pendingRejectId   = orderId;
+    pendingDeleteId   = null;
+    pendingApproveResId = null;
+    pendingRejectResId  = null;
+
+    const order = allOrdersCache.find(o => o.id === orderId);
+    const name  = order?.name || "this item";
+    const cust  = order?.customerUsername || order?.customer || "the customer";
+
+    const title = document.getElementById("delModalTitle");
+    const sub   = document.getElementById("delModalSub");
+    const btn   = document.getElementById("delConfirmBtn");
+    title.textContent = "🚫 Reject Order?";
+    sub.innerHTML = `You are about to reject <strong>${cust}'s</strong> order for <strong>"${name}"</strong>. The customer will see this order as rejected. This action <strong>cannot be undone</strong>.`;
+    btn.textContent = "🚫 Yes, Reject";
+    btn.className = "del-modal-confirm is-reject";
+    document.getElementById("delModalOverlay").classList.add("open");
+};
+
+// ── Approve Reservation modal ──────────────────────────────────────────────
+window.openApproveResModal = function(orderId) {
+    pendingApproveResId = orderId;
+    pendingDeleteId     = null;
+    pendingRejectId     = null;
+    pendingRejectResId  = null;
+
+    const order = allOrdersCache.find(o => o.id === orderId);
+    const name  = order?.name || "this item";
+    const cust  = order?.customerUsername || order?.customer || "the customer";
+    const date  = (order?.reserveDate || order?.date) ? ` on <strong>${order.reserveDate || order.date}</strong>` : '';
+
+    const title = document.getElementById("delModalTitle");
+    const sub   = document.getElementById("delModalSub");
+    const btn   = document.getElementById("delConfirmBtn");
+    title.textContent = "✅ Approve Reservation?";
+    sub.innerHTML = `You are about to approve <strong>${cust}'s</strong> reservation for <strong>"${name}"</strong>${date}. The status will be updated to <strong>Reserved</strong>.`;
+    btn.textContent = "✅ Yes, Approve";
+    btn.className = "del-modal-confirm is-approve";
+    document.getElementById("delModalOverlay").classList.add("open");
+};
+
+// ── Reject Reservation modal ───────────────────────────────────────────────
+window.openRejectResModal = function(orderId) {
+    pendingRejectResId  = orderId;
+    pendingDeleteId     = null;
+    pendingRejectId     = null;
+    pendingApproveResId = null;
+
+    const order = allOrdersCache.find(o => o.id === orderId);
+    const name  = order?.name || "this item";
+    const cust  = order?.customerUsername || order?.customer || "the customer";
+
+    const title = document.getElementById("delModalTitle");
+    const sub   = document.getElementById("delModalSub");
+    const btn   = document.getElementById("delConfirmBtn");
+    title.textContent = "❌ Reject Reservation?";
+    sub.innerHTML = `You are about to reject <strong>${cust}'s</strong> reservation for <strong>"${name}"</strong>. The order will stay <strong>Pending</strong> and a delete button will appear. This action <strong>cannot be undone</strong>.`;
+    btn.textContent = "❌ Yes, Reject";
+    btn.className = "del-modal-confirm is-res-reject";
+    document.getElementById("delModalOverlay").classList.add("open");
+};
+
+window.closeDelModal = function() {
+    document.getElementById("delModalOverlay").classList.remove("open");
+    pendingDeleteId     = null;
+    pendingRejectId     = null;
+    pendingApproveResId = null;
+    pendingRejectResId  = null;
+};
+
+document.getElementById("delConfirmBtn").addEventListener("click", async function() {
+    const btn = this;
+    btn.disabled = true;
+
+    // ── Handle Approve Reservation ────────────────────────────────────
+    if (pendingApproveResId) {
+        btn.innerText = "Approving...";
+        try {
+            // Set status to "reserved" so it shows as approved + locked until date
+            await updateOrderStatus(pendingApproveResId, "reserved");
+            const order = allOrdersCache.find(o => o.id === pendingApproveResId);
+            if (order) order.status = "reserved";
+            closeDelModal();
+            showToast("✅ Reservation approved! Status locked until reservation date.");
+            renderOrders();
+            updateCancelledTabBadge();
+            updateStatsStrip();
+        } catch(e) {
+            alert("Failed to approve reservation: " + e.message);
+        } finally {
+            btn.disabled  = false;
+            btn.innerText = "✅ Yes, Approve";
+        }
+        return;
+    }
+
+    // ── Handle Reject Reservation ─────────────────────────────────────
+    if (pendingRejectResId) {
+        btn.innerText = "Rejecting...";
+        try {
+            await updateDoc(doc(db, "orders", pendingRejectResId), {
+                sellerRejectedReservation: true,
+                updatedAt: serverTimestamp()
+            });
+            const order = allOrdersCache.find(o => o.id === pendingRejectResId);
+            if (order) order.sellerRejectedReservation = true;
+            closeDelModal();
+            showToast("❌ Reservation rejected.");
+            renderOrders();
+            updateCancelledTabBadge();
+            updateStatsStrip();
+        } catch(e) {
+            alert("Failed to reject reservation: " + e.message);
+        } finally {
+            btn.disabled  = false;
+            btn.innerText = "❌ Yes, Reject";
+        }
+        return;
+    }
+
+    // ── Handle Reject (regular order) ─────────────────────────────────
+    if (pendingRejectId) {
+        btn.innerText = "Rejecting...";
+        try {
+            await updateOrderStatus(pendingRejectId, "rejected");
+            const order = allOrdersCache.find(o => o.id === pendingRejectId);
+            if (order) order.status = "rejected";
+            closeDelModal();
+            showToast("🚫 Order rejected.");
+            renderOrders();
+            updateCancelledTabBadge();
+            updateStatsStrip();
+        } catch(e) {
+            alert("Failed to reject order: " + e.message);
+        } finally {
+            btn.disabled  = false;
+            btn.innerText = "🚫 Yes, Reject";
+        }
+        return;
+    }
+
+    // ── Handle Delete ──────────────────────────────────────────────────
+    if (!pendingDeleteId) return;
+    btn.innerText = "Deleting...";
+    try {
+        await deleteDoc(doc(db, "orders", pendingDeleteId));
+        allOrdersCache = allOrdersCache.filter(o => o.id !== pendingDeleteId);
+        closeDelModal();
+        showToast("🗑️ Order deleted.");
+        renderOrders();
+        updateCancelledTabBadge();
+        updateStatsStrip();
+    } catch(e) {
+        alert("Failed to delete: " + e.message);
+    } finally {
+        btn.disabled  = false;
+        btn.innerText = "🗑️ Yes, Delete";
+    }
+});
+
+// ── Change status ──────────────────────────────────────────────────────────
+window.changeStatus = async function(orderId, newStatus) {
+    try {
+        await updateOrderStatus(orderId, newStatus);
+        const order = allOrdersCache.find(o => o.id === orderId);
+        if (order) order.status = newStatus;
+        showToast("Status updated: " + getStatusInfo(newStatus).label);
+        renderOrders();
+        updateCancelledTabBadge();
+        updateStatsStrip();
+    } catch(e) {
+        alert("Failed to update status: " + e.message);
+    }
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function getStatusInfo(status) {
+    const map = {
+        "pending":    { label: "🕐 Pending",    bg: "#fff3cd", color: "#856404" },
+        "to-ship":    { label: "📦 To Ship",    bg: "#d1ecf1", color: "#0c5460" },
+        "to-receive": { label: "🚚 To Receive", bg: "#cce5ff", color: "#004085" },
+        "reserved":   { label: "📅 Reserved",   bg: "#fde8d8", color: "#7d3c00" },
+        "delivered":  { label: "✅ Delivered",  bg: "#d0f0e8", color: "#0a5940" },
+        "cancelled":  { label: "🚫 Cancelled",  bg: "#fde8e8", color: "#8b0000" },
+        "rejected":   { label: "🚫 Rejected",   bg: "#f5e0ff", color: "#5c007a" },
+    };
+    return map[status] || { label: status || "Unknown", bg: "#e2e3e5", color: "#383d41" };
+}
+
+function showToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.innerText = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2500);
+}
+
+window.goBack = function() { window.location.href = "homeseller.html"; };
+
+setInterval(loadOrders, 10000);
+loadOrders();
+</script>
+</body>
+</html>

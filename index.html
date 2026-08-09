@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KANTO SWEETS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Link to external CSS -->
+    <link rel="stylesheet" href="HFU&S.css">
+    <style>
+        .tagline {
+            position: relative !important;
+            z-index: 2 !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">KANTO SWEETS</div>
+
+    <div class="welcome">WELCOME</div>
+
+    <div class="logo">
+        <!-- Replace with your actual logo file -->
+        <img src="images/newcake.png" alt="Kanto Sweets Logo">
+    </div>
+
+    <div class="buttons">
+    <button class="btn" onclick="goToLogin()">Login</button>
+    </div>
+
+    <div class="tagline" style="display:block; text-align:center; margin-top:22px; font-size:1.1rem; letter-spacing:2px; text-transform:uppercase; color:#c0bfbc; font-style:italic;">Fresh, Sweet, and Local</div>
+
+<script>
+function goToLogin() {
+    window.location.href = "login.html";
+}
+</script>   
+
+</body>
+</html>

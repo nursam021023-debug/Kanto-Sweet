@@ -1,0 +1,291 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background: #0e0e0e;
+    color: #fff;
+    min-height: 100vh;
+    padding-bottom: 60px;
+}
+
+/* ── BACK BUTTON ── */
+.back-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 200;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 18px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: background 0.3s;
+}
+.back-btn:hover { background: rgba(255,255,255,0.15); }
+
+/* ── BANNER ── */
+.banner {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    border-bottom: 3px solid rgba(255,255,255,0.1);
+}
+
+.banner-bg {
+    position: absolute;
+    inset: 0;
+    background-color: #1a1a2e;
+    background-size: cover;
+    background-position: center;
+    filter: blur(6px) brightness(0.5);
+    transform: scale(1.1);
+    z-index: 0;
+}
+
+.banner-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1;
+}
+
+/* Cart — top right */
+.cart-btn {
+    position: absolute;
+    top: 14px;
+    right: 120px;
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(80,80,80,0.6);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #5bc8f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: background 0.2s;
+}
+.cart-btn:hover { background: rgba(255,255,255,0.2); }
+.cart-btn svg { stroke: #5bc8f5; }
+
+/* Edit photo — bottom right */
+.edit-logo-btn {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.65);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    color: #fff;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: background 0.2s;
+}
+.edit-logo-btn:hover { background: rgba(255,255,255,0.15); }
+.edit-logo-btn svg { flex-shrink: 0; stroke: #fff; }
+
+/* Profile pic + name — centered bottom area */
+.banner-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    padding: 0 24px 18px;
+}
+
+.banner-logo {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #fff;
+    box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    flex-shrink: 0;
+}
+
+.banner-info {
+    flex: 1;
+    padding-bottom: 4px;
+}
+
+.banner-info h1 {
+    font-size: clamp(1.2rem, 3.5vw, 2rem);
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+.banner-info p {
+    font-size: 0.85rem;
+    color: #bbb;
+    margin-top: 2px;
+}
+
+.edit-link {
+    display: inline-block;
+    margin-top: 4px;
+    color: #5bc8f5;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.edit-link:hover {
+    color: #a8e6ff;
+    text-decoration: underline;
+}
+
+/* ── INFO CARD ── */
+.info-card {
+    background: #1e1e1e;
+    border-radius: 20px;
+    margin: 20px 15px 0;
+    padding: 22px 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* ── PURCHASES ── */
+.purchases-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.view-hist {
+    font-size: 0.78rem;
+    color: #777;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.view-hist:hover { color: #ccc; }
+
+.purchases-grid {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+}
+
+.purchase-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    flex: 1;
+    transition: transform 0.15s;
+}
+.purchase-item:hover { transform: translateY(-3px); }
+
+.p-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.p-icon svg { stroke: #ccc; }
+
+.purchase-item span {
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+}
+.purchase-item strong {
+    font-size: 11px;
+    color: #fff;
+}
+
+/* Badge on To Receive */
+.icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── ADDRESS CARD ── */
+.address-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.address-card:hover { background: #2a2a2a; }
+
+/* ── SAVE BUTTON ── */
+.save-wrap {
+    text-align: center;
+    margin-top: 24px;
+}
+
+.save-btn {
+    background: linear-gradient(135deg, #1a1a1a, #3a0000, #800000);
+    color: #fff;
+    border: 1px solid rgba(180,0,0,0.5);
+    padding: 12px 40px;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(128,0,0,0.4);
+}
+.save-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(180,0,0,0.6);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 480px) {
+    .banner { height: 200px; }
+    .banner-content { padding: 0 16px 14px; gap: 12px; }
+    .banner-logo { width: 75px; height: 75px; }
+    .cart-btn { right: 70px; }
+}

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Profile</title>
+    <link rel="stylesheet" href="customer-profile.css">
+</head>
+<body>
+ 
+    <!-- BACK BUTTON -->
+    <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+ 
+    <!-- BANNER -->
+    <div class="banner">
+        <div class="banner-bg" id="bannerBg"></div>
+        <div class="banner-overlay"></div>
+ 
+        <!-- Cart button top-right -->
+        <button class="cart-btn" onclick="window.location.href='cart.html'">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+        </button>
+ 
+        <!-- Edit photo button bottom-right -->
+        <label class="edit-logo-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Change Photo
+            <input type="file" id="photoUpload" accept="image/*" style="display:none;">
+        </label>
+ 
+        <!-- Profile + Name row -->
+        <div class="banner-content">
+            <img class="banner-logo" id="profilePic" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23555'/%3E%3C/svg%3E" alt="Profile">
+            <div class="banner-info">
+                <h1 id="customerName">Name of Customer</h1>
+                <p id="customerUsername">@username</p>
+                <span class="edit-link" onclick="editField('customerName', 'Your Name')">Edit</span>
+            </div>
+        </div>
+    </div>
+ 
+    <!-- MY PURCHASES -->
+    <div class="info-card">
+        <div class="purchases-header">
+            <span class="card-title">My Purchases</span>
+            <span class="view-hist" onclick="window.location.href='purchase-history.html'">View Purchase History ›</span>
+        </div>
+        <div class="purchases-grid">
+ 
+            <div class="purchase-item" onclick="window.location.href='pending.html'">
+                <div class="p-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span class="badge" id="pendingBadge" style="display:none;">0</span>
+                </div>
+                <span>Pending</span>
+            </div>
+ 
+            <div class="purchase-item" onclick="window.location.href='to-ship.html'">
+                <div class="p-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    </svg>
+                    <span class="badge" id="toShipBadge" style="display:none;">0</span>
+                </div>
+                <span>To Ship</span>
+            </div>
+ 
+            <div class="purchase-item" onclick="window.location.href='to-receive.html'">
+                <div class="p-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="1" y="3" width="15" height="13" rx="1"/>
+                        <path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+                    </svg>
+                    <span class="badge" id="receiveBadge" style="display:none;">0</span>
+                </div>
+                <span>To Receive</span>
+            </div>
+ 
+            <div class="purchase-item" onclick="window.location.href='to-rate.html'">
+                <div class="p-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    <span class="badge" id="toRateBadge" style="display:none;">0</span>
+                </div>
+                <span>To Rate</span>
+            </div>
+
+            <div class="purchase-item" onclick="window.location.href='reservation.html'">
+                <div class="p-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span class="badge" id="reserveBadge" style="display:none;">0</span>
+                </div>
+                <span><strong>Reservation</strong></span>
+            </div>
+ 
+        </div>
+    </div>
+ 
+    <!-- ADDRESS BOOK -->
+    <div class="info-card address-card" onclick="window.location.href='address-book.html'">
+        <span class="card-title">Address Book</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5bc8f5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+ 
+    <!-- SAVE BUTTON -->
+    <div class="save-wrap">
+        <button class="save-btn" onclick="saveProfile()">Save Profile</button>
+    </div>
+ 
+<script>
+    const currentCustomer = localStorage.getItem("currentCustomer");
+    if (!currentCustomer) {
+        alert("Please login first.");
+        window.location.href = "login.html";
+    }
+ 
+    // Load profile from Firestore
+    const uid = localStorage.getItem("currentCustomerUID") || "";
+    (async () => {
+        try {
+            const { getCustomer } = await import('./db.js');
+            const data = await getCustomer(uid);
+            if (data) {
+                if (data.profilePic) {
+                    document.getElementById("profilePic").src = data.profilePic;
+                    document.getElementById("bannerBg").style.backgroundImage = `url('${data.profilePic}')`;
+                }
+                document.getElementById("customerName").innerText = data.customerName || data.username || currentCustomer;
+            }
+        } catch(e) { console.error("Profile load failed:", e); }
+    })();
+    document.getElementById("customerName").innerText = currentCustomer;
+    document.getElementById("customerUsername").innerText = "@" + currentCustomer;
+ 
+    // ── LOAD ORDER BADGES ──
+    async function loadOrderBadges() {
+        let orders = [], reservations = [];
+        const uid = localStorage.getItem("currentCustomerUID") || "";
+        try {
+            // Try Firestore first
+            const { getOrdersByCustomer } = await import("./db.js");
+            const all = await getOrdersByCustomer(uid);
+            orders       = all.filter(o => o.type !== 'reservation');
+            reservations = all.filter(o => o.type === 'reservation');
+        } catch(e) {
+            orders = [];
+            reservations = [];
+        }
+ 
+        const counts = {
+            "pending":    0,
+            "to-ship":    0,
+            "to-receive": 0,
+            "to-rate":    0,
+        };
+ 
+        // Count orders per status
+        (orders||[]).forEach(o => {
+            if (counts.hasOwnProperty(o.status)) counts[o.status]++;
+        });
+ 
+        // Count reservations per status
+        (reservations||[]).forEach(r => {
+            if (counts.hasOwnProperty(r.status)) counts[r.status]++;
+        });
+ 
+        // Count pending/approved reservations for the Reservation badge
+        const reserveBadgeCount = reservations.filter(r =>
+            r.status === "pending" || r.status === "reserved" || r.status === "approved"
+        ).length;
+ 
+        setBadge("pendingBadge",  counts["pending"]);
+        setBadge("toShipBadge",   counts["to-ship"]);
+        setBadge("receiveBadge",  counts["to-receive"]);
+        setBadge("toRateBadge",   counts["to-rate"]);
+        setBadge("reserveBadge",  reserveBadgeCount);
+    }
+ 
+    function setBadge(id, count) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (count > 0) {
+            el.style.display = "flex";
+            el.innerText = count;
+        } else {
+            el.style.display = "none";
+        }
+    }
+ 
+    loadOrderBadges();
+ 
+    // ── LISTEN for storage changes from other tabs/pages ──
+    // Orders stored in Firestore — no localStorage events needed
+ 
+    // Compress image before saving to avoid localStorage size issues
+    function compressImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = reject;
+            reader.onload = e => {
+                const img = new Image();
+                img.onerror = reject;
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    let w = img.width, h = img.height, maxDim = 400;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                        else { w = Math.round(w * maxDim / h); h = maxDim; }
+                    }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+                    let quality = 0.75, dataUrl = canvas.toDataURL("image/jpeg", quality);
+                    while (dataUrl.length > 200 * 1024 * 1.37 && quality > 0.15) { quality -= 0.1; dataUrl = canvas.toDataURL("image/jpeg", quality); }
+                    resolve(dataUrl);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Photo upload with compression
+    document.getElementById("photoUpload").addEventListener("change", async function () {
+        const file = this.files[0];
+        if (!file) return;
+        try {
+            const newPic = await compressImage(file);
+            document.getElementById("profilePic").src = newPic;
+            document.getElementById("bannerBg").style.backgroundImage = `url('${newPic}')`;
+
+            // Photo saved to Firestore above
+            const uid2 = localStorage.getItem("currentCustomerUID");
+            try {
+                const { saveCustomerProfile } = await import("./db.js");
+                await saveCustomerProfile(uid2, { profilePic: newPic });
+            } catch(e) { console.error("Photo save failed:", e); }
+            alert("Profile photo updated! Click Save Profile to keep all changes.");
+        } catch(err) {
+            alert("Could not process image. Please try a smaller photo.");
+        }
+    });
+ 
+    function editField(id, label) {
+        const current = document.getElementById(id).innerText;
+        const newVal = prompt("Edit " + label + ":", current);
+        if (newVal !== null && newVal.trim() !== "") {
+            document.getElementById(id).innerText = newVal.trim();
+        }
+    }
+ 
+    async function saveProfile() {
+        const newName = document.getElementById("customerName").innerText.trim();
+        if (!newName) { alert("Name cannot be empty."); return; }
+        const uid = localStorage.getItem("currentCustomerUID");
+        try {
+            const { saveCustomerProfile } = await import("./db.js");
+            await saveCustomerProfile(uid, { customerName: newName });
+            alert("Profile saved!");
+        } catch(e) { alert("Failed to save: " + e.message); }
+    }
+ 
+    function goBack() {
+        window.location.href = "foruzer.html";
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seller Dashboard</title>
+<link rel="stylesheet" href="seller dashboard.css">
+<style>
+    .price-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin:10px 0; }
+    .price-grid label { font-size:11px; font-weight:700; color:#ccc; display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.4px; }
+    .price-grid input { width:100% !important; padding:8px 10px; margin:0; box-sizing:border-box; }
+    .edit-fields input { width:100% !important; margin:0; box-sizing:border-box; }
+    .edit-fields { display:flex; flex-direction:column; gap:6px; margin:8px 0; }
+
+    .availability-badge { display:inline-block; font-size:11px; padding:3px 10px; border-radius:99px; font-weight:700; margin:4px 0; }
+    .avail   { background:#d4edda; color:#155724; }
+    .unavail { background:#e2e3e5; color:#383d41; }
+    .product-card.unavailable { opacity:0.55; }
+
+    .size-prices { font-size:12px; color:#ccc; margin:4px 0 8px; display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+    .size-prices span { background:rgba(255,255,255,0.1); border-radius:6px; padding:2px 8px; }
+
+    .card-btn-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-top:8px; }
+    .btn-toggle { background:linear-gradient(135deg,#555,#888) !important; font-size:12px; padding:6px 12px !important; }
+    .btn-edit   { background:linear-gradient(135deg,#1565c0,#1e88e5) !important; font-size:12px; padding:6px 12px !important; }
+    .btn-delete { background:linear-gradient(135deg,#7b0000,#e53935) !important; font-size:12px; padding:6px 12px !important; }
+    .btn-save   { background:linear-gradient(135deg,#1b5e20,#43a047) !important; font-size:12px; padding:6px 14px !important; }
+    .btn-cancel { background:rgba(255,255,255,0.15) !important; color:#fff !important; font-size:12px; padding:6px 14px !important; }
+
+    #loadingOverlay {
+        display:none; position:fixed; inset:0;
+        background:rgba(0,0,0,0.65); z-index:999;
+        justify-content:center; align-items:center;
+        flex-direction:column; gap:14px;
+        color:#fff; font-size:1rem; font-family:'Segoe UI',sans-serif;
+    }
+    #loadingOverlay.show { display:flex; }
+    .spinner {
+        width:40px; height:40px;
+        border:4px solid rgba(255,255,255,0.2);
+        border-top-color:#fff; border-radius:50%;
+        animation:spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .product-card img { width:100%; max-height:130px; object-fit:cover; border-radius:10px; margin-bottom:8px; }
+
+    .file-label {
+        display:block; margin:8px auto; width:90%;
+        padding:10px; background:rgba(255,255,255,0.08);
+        border:1.5px dashed rgba(255,255,255,0.3);
+        border-radius:10px; cursor:pointer; font-size:0.85rem;
+        color:#ccc; text-align:center; transition:border-color 0.2s;
+    }
+    .file-label:hover { border-color:#fff; color:#fff; }
+    #previewImg { display:none; width:90%; max-height:160px; object-fit:cover; border-radius:10px; margin:8px auto; }
+
+    /* ── DAILY STOCK STYLES ── */
+    .stock-box {
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin: 8px 0;
+    }
+    .stock-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 6px;
+    }
+    .stock-label {
+        font-size: 11px; font-weight: 700; color: #aaa;
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .stock-count {
+        font-size: 13px; font-weight: 800;
+    }
+    .stock-count.good    { color: #4caf50; }
+    .stock-count.warning { color: #ff9800; }
+    .stock-count.full    { color: #f44336; }
+
+    .stock-bar-bg {
+        background: rgba(255,255,255,0.12);
+        border-radius: 99px; height: 7px; overflow: hidden;
+    }
+    .stock-bar-fill {
+        height: 100%; border-radius: 99px;
+        transition: width 0.4s ease;
+    }
+    .stock-bar-fill.good    { background: linear-gradient(90deg, #43a047, #66bb6a); }
+    .stock-bar-fill.warning { background: linear-gradient(90deg, #fb8c00, #ffa726); }
+    .stock-bar-fill.full    { background: linear-gradient(90deg, #e53935, #ef5350); }
+
+    .stock-sub {
+        font-size: 11px; color: #888; margin-top: 5px; text-align: center;
+    }
+    .stock-unlimited {
+        font-size: 12px; color: #888; text-align: center; padding: 6px 0;
+        font-style: italic;
+    }
+
+    /* Edit stock row inside edit mode */
+    .edit-stock-row {
+        display: flex; align-items: center; gap: 8px; margin-top: 2px;
+    }
+    .edit-stock-row input {
+        flex: 1; padding: 7px 10px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px; color: #fff; font-size: 13px;
+    }
+    .edit-stock-row input::placeholder { color: #888; }
+
+    /* Add form stock input label */
+    .form-label {
+        font-size:11px; font-weight:700; color:#ccc;
+        text-transform:uppercase; letter-spacing:0.4px;
+        display:block; margin:10px 0 4px;
+    }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <span id="loadingMsg">Please wait...</span>
+</div>
+
+<h2>Seller Dashboard</h2>
+<p id="welcome"></p>
+
+<div class="container">
+    <!-- ADD PRODUCT FORM -->
+    <div class="form-box">
+        <h3>Add Product</h3>
+
+        <input type="text" id="productName" placeholder="Product Name">
+
+        <label class="form-label">Price (₱)</label>
+        <input type="number" id="priceAmount" placeholder="e.g. 150" min="0" step="0.01"
+               style="width:100%!important;box-sizing:border-box;margin-bottom:8px;">
+
+        <label class="form-label">📦 Daily Stock Limit <span style="font-weight:400;text-transform:none;font-size:11px;">(how many you can sell today — leave 0 for unlimited)</span></label>
+        <input type="number" id="dailyStockInput" placeholder="e.g. 20  (0 = unlimited)" min="0" step="1"
+               style="width:100%!important;box-sizing:border-box;margin-bottom:8px;">
+
+        <label class="file-label" for="productImage">
+            📷 Tap to choose product image
+            <input type="file" id="productImage" accept="image/*" style="display:none;" onchange="previewProduct(this)">
+        </label>
+        <img id="previewImg" alt="Preview">
+
+        <button class="add-btn" onclick="addProduct()">+ Add Product</button>
+    </div>
+
+    <h3>Your Products</h3>
+    <div id="productList"></div>
+
+    <div class="actions">
+        <button class="back-btn" onclick="window.location.href='homeseller.html'">Back</button>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+    getFirestore, collection, query, where,
+    getDocs, addDoc, doc, updateDoc, deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey:            "AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",
+    authDomain:        "dalocal-8ceb3.firebaseapp.com",
+    projectId:         "dalocal-8ceb3",
+    storageBucket:     "dalocal-8ceb3.appspot.com",
+    messagingSenderId: "737186112999",
+    appId:             "1:737186112999:web:f61d20523f4ac479f8c942"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── AUTH CHECK ──────────────────────────────────────────────────────────────
+const currentSeller = localStorage.getItem("currentSeller");
+if (!currentSeller) {
+    alert("Please login first.");
+    window.location.href = "seller login.html";
+    throw new Error("stop");
+}
+document.getElementById("welcome").innerText = "Welcome, " + currentSeller + "!";
+
+// ── LOADING ─────────────────────────────────────────────────────────────────
+function showLoading(msg) {
+    document.getElementById("loadingMsg").textContent = msg || "Please wait...";
+    document.getElementById("loadingOverlay").classList.add("show");
+}
+function hideLoading() {
+    document.getElementById("loadingOverlay").classList.remove("show");
+}
+
+// ── TODAY'S DATE STRING  (YYYY-MM-DD) ───────────────────────────────────────
+function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+// ── COUNT HOW MANY ORDERS PLACED TODAY FOR A SPECIFIC PRODUCT ───────────────
+// We look at orders where sellerUsername matches, productId matches, and
+// createdAt is today. Status must NOT be cancelled/rejected.
+async function getSoldTodayCount(productId) {
+    try {
+        const snap = await getDocs(query(
+            collection(db, "orders"),
+            where("sellerUsername", "==", currentSeller),
+            where("productId",      "==", productId)
+        ));
+
+        const today = todayStr();
+        let count = 0;
+        snap.docs.forEach(d => {
+            const data = d.data();
+            // Skip cancelled / rejected orders
+            if (data.status === "cancelled" || data.status === "rejected") return;
+            // Check if order was created today
+            const created = data.createdAt?.seconds
+                ? new Date(data.createdAt.seconds * 1000)
+                : data.createdAt ? new Date(data.createdAt) : null;
+            if (created && created.toISOString().slice(0, 10) === today) {
+                count += (data.qty || 1);
+            }
+        });
+        return count;
+    } catch(e) {
+        return 0;
+    }
+}
+
+// ── COMPRESS IMAGE ──────────────────────────────────────────────────────────
+function compressToBase64(file, maxPx = 400, targetKB = 150) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image load failed")); };
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            const canvas = document.createElement("canvas");
+            let w = img.width, h = img.height;
+            if (w > maxPx || h > maxPx) {
+                if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+                else       { w = Math.round(w * maxPx / h); h = maxPx; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            let quality = 0.75;
+            let dataUrl = canvas.toDataURL("image/jpeg", quality);
+            while (dataUrl.length > targetKB * 1024 * 1.37 && quality > 0.1) {
+                quality -= 0.08;
+                dataUrl = canvas.toDataURL("image/jpeg", quality);
+            }
+            resolve(dataUrl);
+        };
+        img.src = url;
+    });
+}
+
+// ── PREVIEW ─────────────────────────────────────────────────────────────────
+window.previewProduct = function(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const prev = document.getElementById("previewImg");
+    prev.src = URL.createObjectURL(file);
+    prev.style.display = "block";
+};
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let products = [];
+
+// ── LOAD PRODUCTS ────────────────────────────────────────────────────────────
+async function loadProducts() {
+    showLoading("Loading products...");
+    try {
+        const q    = query(collection(db, "products"), where("seller", "==", currentSeller));
+        const snap = await getDocs(q);
+        products   = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        await displayProducts();
+    } catch (err) {
+        alert("Failed to load products: " + err.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// ── DISPLAY PRODUCTS ─────────────────────────────────────────────────────────
+async function displayProducts() {
+    const list = document.getElementById("productList");
+    list.innerHTML = "";
+
+    if (products.length === 0) {
+        list.innerHTML = "<p style='color:#ccc;'>No products yet. Add your first one above!</p>";
+        return;
+    }
+
+    for (let index = 0; index < products.length; index++) {
+        const p           = products[index];
+        const isAvailable = p.available !== false;
+        const dailyLimit  = p.dailyStock || 0;   // 0 = unlimited
+        const soldToday   = dailyLimit > 0 ? await getSoldTodayCount(p.id) : 0;
+        const remaining   = dailyLimit > 0 ? Math.max(0, dailyLimit - soldToday) : null;
+
+        // Bar colour logic
+        let stockClass = "good";
+        if (remaining !== null) {
+            const pct = remaining / dailyLimit;
+            if (pct <= 0)        stockClass = "full";
+            else if (pct <= 0.3) stockClass = "warning";
+        }
+
+        // Build stock display HTML
+        let stockHTML = "";
+        if (dailyLimit === 0) {
+            stockHTML = `<div class="stock-box"><div class="stock-unlimited">📦 No daily limit set</div></div>`;
+        } else {
+            const fillPct   = Math.max(0, Math.min(100, (remaining / dailyLimit) * 100));
+            const countText = remaining === 0
+                ? "SOLD OUT TODAY"
+                : `${remaining} / ${dailyLimit} left today`;
+            stockHTML = `
+                <div class="stock-box">
+                    <div class="stock-header">
+                        <span class="stock-label">📦 Daily Stock</span>
+                        <span class="stock-count ${stockClass}">${countText}</span>
+                    </div>
+                    <div class="stock-bar-bg">
+                        <div class="stock-bar-fill ${stockClass}" style="width:${fillPct}%"></div>
+                    </div>
+                    <div class="stock-sub">Resets tomorrow · ${soldToday} sold today</div>
+                </div>`;
+        }
+
+        const card = document.createElement("div");
+        card.className = "product-card" + (isAvailable ? "" : " unavailable");
+        card.id = "card-" + index;
+        card.innerHTML = `
+            <img src="${p.image}" alt="${p.name}" onerror="this.style.display='none'">
+
+            <!-- VIEW MODE -->
+            <div id="view-${index}">
+                <h4>${p.name}</h4>
+                <p style="font-size:0.9rem;color:#ccc;margin:4px 0 8px;text-align:center;">₱${p.price}</p>
+                ${stockHTML}
+            </div>
+
+            <!-- EDIT MODE -->
+            <div id="edit-${index}" style="display:none;">
+                <div class="edit-fields">
+                    <input type="text"   id="editName-${index}"  value="${p.name}"  placeholder="Product Name">
+                    <label style="font-size:11px;font-weight:700;color:#ccc;text-transform:uppercase;display:block;margin:6px 0 4px;">Price (₱)</label>
+                    <input type="number" id="editPrice-${index}" value="${p.price}" min="0" step="0.01"
+                           style="width:100%!important;box-sizing:border-box;">
+                    <label style="font-size:11px;font-weight:700;color:#ccc;text-transform:uppercase;display:block;margin:6px 0 4px;">
+                        📦 Daily Stock Limit <span style="font-weight:400;text-transform:none;">(0 = unlimited)</span>
+                    </label>
+                    <div class="edit-stock-row">
+                        <input type="number" id="editStock-${index}" value="${dailyLimit}"
+                               min="0" step="1" placeholder="0 = unlimited">
+                    </div>
+                </div>
+                <div class="card-btn-row">
+                    <button class="btn-save"   onclick="saveEdit(${index})">Save</button>
+                    <button class="btn-cancel" onclick="cancelEdit(${index})">Cancel</button>
+                </div>
+            </div>
+
+            <span class="availability-badge ${isAvailable ? 'avail' : 'unavail'}">
+                ${isAvailable ? 'Available' : 'Not Available'}
+            </span>
+
+            <div class="card-btn-row">
+                <button class="btn-toggle" onclick="toggleAvailability(${index})">
+                    ${isAvailable ? 'Mark Unavailable' : 'Mark Available'}
+                </button>
+                <button class="btn-edit"   id="editBtn-${index}" onclick="editProduct(${index})">Edit</button>
+                <button class="btn-delete" onclick="deleteProduct(${index})">Delete</button>
+            </div>
+        `;
+        list.appendChild(card);
+    }
+}
+
+// ── ADD PRODUCT ──────────────────────────────────────────────────────────────
+window.addProduct = async function() {
+    const name       = document.getElementById("productName").value.trim();
+    const amount     = document.getElementById("priceAmount").value.trim();
+    const stockVal   = document.getElementById("dailyStockInput").value.trim();
+    const imageFile  = document.getElementById("productImage").files[0];
+    const dailyStock = stockVal === "" ? 0 : Math.max(0, parseInt(stockVal) || 0);
+
+    if (!name)   { alert("Please enter a product name."); return; }
+    if (!amount || isNaN(amount) || Number(amount) <= 0) { alert("Please enter a valid price greater than 0."); return; }
+    if (!imageFile) { alert("Please choose a product image."); return; }
+
+    showLoading("Compressing image...");
+    try {
+        const imageBase64 = await compressToBase64(imageFile);
+        if (!imageBase64) throw new Error("Image compression failed.");
+
+        showLoading("Saving product...");
+        await addDoc(collection(db, "products"), {
+            seller:     currentSeller,
+            name:       name,
+            price:      Number(amount).toFixed(2),
+            image:      imageBase64,
+            available:  true,
+            dailyStock: dailyStock    // 0 = unlimited
+        });
+
+        document.getElementById("productName").value    = "";
+        document.getElementById("priceAmount").value    = "";
+        document.getElementById("dailyStockInput").value = "";
+        document.getElementById("productImage").value   = "";
+        const prev = document.getElementById("previewImg");
+        prev.src = ""; prev.style.display = "none";
+
+        hideLoading();
+        alert("Product added successfully!");
+        await loadProducts();
+
+    } catch (err) {
+        hideLoading();
+        alert("Failed to add product: " + err.message);
+    }
+};
+
+// ── EDIT / SAVE / CANCEL ─────────────────────────────────────────────────────
+window.editProduct = function(index) {
+    document.getElementById("view-"    + index).style.display = "none";
+    document.getElementById("edit-"    + index).style.display = "block";
+    document.getElementById("editBtn-" + index).style.display = "none";
+};
+
+window.cancelEdit = function(index) {
+    document.getElementById("view-"    + index).style.display = "block";
+    document.getElementById("edit-"    + index).style.display = "none";
+    document.getElementById("editBtn-" + index).style.display = "inline-block";
+};
+
+window.saveEdit = async function(index) {
+    const newName  = document.getElementById("editName-"  + index).value.trim();
+    const newPrice = document.getElementById("editPrice-" + index).value.trim();
+    const stockRaw = document.getElementById("editStock-" + index).value.trim();
+    const newStock = stockRaw === "" ? 0 : Math.max(0, parseInt(stockRaw) || 0);
+
+    if (!newName)  { alert("Product name cannot be empty."); return; }
+    if (!newPrice || isNaN(newPrice) || Number(newPrice) <= 0) { alert("Please enter a valid price."); return; }
+
+    showLoading("Saving changes...");
+    try {
+        await updateDoc(doc(db, "products", products[index].id), {
+            name:       newName,
+            price:      Number(newPrice).toFixed(2),
+            dailyStock: newStock
+        });
+        await loadProducts();
+    } catch (err) {
+        hideLoading();
+        alert("Failed to save: " + err.message);
+    }
+};
+
+// ── TOGGLE AVAILABILITY ──────────────────────────────────────────────────────
+window.toggleAvailability = async function(index) {
+    const p = products[index];
+    showLoading("Updating...");
+    try {
+        await updateDoc(doc(db, "products", p.id), { available: p.available === false });
+        await loadProducts();
+    } catch (err) {
+        hideLoading();
+        alert("Failed to update: " + err.message);
+    }
+};
+
+// ── DELETE ───────────────────────────────────────────────────────────────────
+window.deleteProduct = async function(index) {
+    if (!confirm('Delete "' + products[index].name + '"? This cannot be undone.')) return;
+    showLoading("Deleting...");
+    try {
+        await deleteDoc(doc(db, "products", products[index].id));
+        await loadProducts();
+    } catch (err) {
+        hideLoading();
+        alert("Failed to delete: " + err.message);
+    }
+};
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+loadProducts();
+</script>
+</body>
+</html>

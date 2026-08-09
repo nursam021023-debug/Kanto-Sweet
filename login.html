@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login / Create Account</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif; }
+
+body {
+    min-height:100vh;
+    display:flex; justify-content:center; align-items:center;
+    padding:40px 20px;
+    background:linear-gradient(135deg, #4b4f4d, #2f3231, #3a3d3b);
+    background-size:400% 400%;
+    animation:gradientBG 15s ease infinite;
+}
+@keyframes gradientBG { 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
+
+.wrap { width:100%; max-width:340px; }
+
+/* ── Role selector ── */
+.role-tabs {
+    display:flex; gap:6px; margin-bottom:14px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:50px; padding:5px;
+}
+.role-tab {
+    flex:1; text-align:center; padding:9px 6px;
+    border-radius:50px; cursor:pointer; user-select:none;
+    color:#bbb; font-size:0.78rem; font-weight:600;
+    transition:all 0.25s ease;
+}
+.role-tab.active {
+    background:linear-gradient(270deg,#4b4f4d,#2f3231,#4b4f4d);
+    color:#fff;
+    box-shadow:0 6px 15px rgba(0,0,0,0.5);
+}
+
+/* ===== FLIP CONTAINER ===== */
+.flip-container { width:100%; height:600px; perspective:1200px; }
+.flipper { position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform 0.7s cubic-bezier(0.4,0.2,0.2,1); }
+.flip-container.flipped .flipper { transform:rotateY(180deg); }
+
+.front, .back {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    border-radius:20px; padding:32px 26px;
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(15px);
+    box-shadow:0 20px 50px rgba(0,0,0,0.6);
+    border:1px solid rgba(255,255,255,0.1);
+    text-align:center; overflow-y:auto;
+}
+.front { transform:rotateY(0deg); }
+.back { transform:rotateY(180deg); }
+
+h2 { margin-bottom:4px; color:#fff; font-size:1.35rem; text-shadow:0 0 5px rgba(0,0,0,0.3); }
+.role-caption { color:rgba(255,255,255,0.55); font-size:0.72rem; margin-bottom:14px; letter-spacing:0.5px; text-transform:uppercase; }
+
+input[type="text"], input[type="email"], input[type="password"], input[type="tel"] {
+    width:100%; padding:10px; margin:7px 0;
+    border-radius:12px; border:1px solid rgba(255,255,255,0.2);
+    outline:none; background:rgba(255,255,255,0.05); color:#fff;
+    font-size:0.92rem; transition:all 0.3s ease;
+}
+input::placeholder { color:#bbb; opacity:0.7; }
+input:focus { border-color:#fff; box-shadow:0 0 10px rgba(255,255,255,0.4); background:rgba(255,255,255,0.1); }
+
+.file-label { display:block; color:#ccc; font-size:0.8rem; text-align:left; margin:10px 0 4px 2px; }
+input[type="file"] {
+    width:100%; padding:7px; margin:4px 0 6px;
+    border-radius:12px; border:1px dashed rgba(255,255,255,0.3);
+    background:rgba(255,255,255,0.05); color:#ccc; font-size:0.8rem; cursor:pointer;
+}
+input[type="file"]:hover { border-color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.08); }
+
+#preview { display:none; width:64px; height:64px; border-radius:50%; object-fit:cover; margin:6px auto; border:2px solid rgba(255,255,255,0.3); box-shadow:0 4px 15px rgba(0,0,0,0.4); }
+
+.hidden-field { display:none !important; }
+
+p { color:#ccc; font-size:0.83rem; margin-top:10px; }
+p a { color:#fff; font-weight:600; text-decoration:underline; cursor:pointer; }
+p a:hover { color:#aad4ff; }
+
+button.primary {
+    width:100%; padding:11px; margin-top:10px;
+    border-radius:50px; border:none; font-size:0.92rem; font-weight:bold; color:#fff;
+    cursor:pointer;
+    background:linear-gradient(270deg,#4b4f4d,#2f3231,#4b4f4d);
+    background-size:400% 400%; animation:btnGradient 6s ease infinite;
+    box-shadow:0 10px 25px rgba(0,0,0,0.5); transition:all 0.3s ease;
+}
+@keyframes btnGradient { 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
+button.primary:hover { transform:translateY(-3px) scale(1.03); box-shadow:0 15px 35px rgba(0,0,0,0.6); }
+button.primary:active { transform:scale(0.97); }
+button.primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; box-shadow:0 10px 25px rgba(0,0,0,0.5); }
+
+.separator { margin:12px 0; height:1px; background:rgba(255,255,255,0.2); }
+
+.forgot-link { display:block; text-align:center; margin:10px 0 4px; font-size:0.78rem; color:#fff; text-decoration:none; }
+.forgot-link:hover { text-decoration:underline; }
+
+.back-btn {
+    position:absolute; top:14px; right:14px; width:36px; height:36px; padding:0;
+    font-size:15px; border-radius:50%; display:flex; justify-content:center; align-items:center;
+    background:linear-gradient(270deg,#dc3545,#ff4b5c,#dc3545);
+    background-size:400% 400%; animation:backBtnGradient 6s ease infinite;
+    box-shadow:0 6px 15px rgba(0,0,0,0.5); cursor:pointer; border:none; color:#fff;
+}
+.back-btn:hover { box-shadow:0 10px 25px rgba(255,0,0,0.6); }
+@keyframes backBtnGradient { 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
+
+#loadingOverlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:999;
+    justify-content:center; align-items:center; color:#fff; font-size:1rem;
+}
+#loadingOverlay.show { display:flex; }
+.spinner { width:32px; height:32px; border:4px solid rgba(255,255,255,0.2); border-top-color:#fff; border-radius:50%; animation:spin 0.8s linear infinite; margin-right:12px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Password strength meter (new, matches existing style) ── */
+.pw-meter-track {
+    display:flex; gap:4px; margin:6px 0 2px;
+}
+.pw-meter-seg {
+    flex:1; height:5px; border-radius:4px;
+    background:rgba(255,255,255,0.15);
+    transition:background 0.3s ease;
+}
+.pw-meter-label {
+    text-align:left; font-size:0.72rem; margin:0 0 6px 2px; min-height:14px;
+    transition:color 0.3s ease;
+}
+.pw-req-list {
+    text-align:left; font-size:0.7rem; color:rgba(255,255,255,0.5);
+    list-style:none; margin:2px 0 4px 2px; line-height:1.6;
+}
+.pw-req-list li { transition:color 0.25s ease; }
+.pw-req-list li.met { color:#6fdc8c; }
+.pw-req-list li.met::before { content:"✓ "; }
+.pw-req-list li:not(.met)::before { content:"• "; }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <span id="loadingMsg">Please wait...</span>
+</div>
+
+<div class="wrap">
+
+    <div class="role-tabs">
+        <div class="role-tab active" data-role="customer" onclick="selectRole('customer')">Customer</div>
+        <div class="role-tab" data-role="seller" onclick="selectRole('seller')">Seller</div>
+        <div class="role-tab" data-role="rider" onclick="selectRole('rider')">Rider</div>
+    </div>
+
+    <div class="flip-container" id="flipContainer">
+        <div class="flipper">
+
+            <!-- LOGIN -->
+            <div class="front">
+                <button class="back-btn" onclick="goBack()">✕</button>
+                <h2 id="loginTitle">Customer Login</h2>
+                <div class="role-caption">One account, sign in below</div>
+                <input type="email" id="loginEmail" placeholder="Email" autocomplete="off">
+                <input type="password" id="loginPass" placeholder="Password" autocomplete="off">
+                <button class="primary" onclick="login()">Login</button>
+                <div class="separator"></div>
+                <a class="forgot-link" id="forgotLink" href="forgot-password.html?from=unified-login.html">Forgot Password?</a>
+                <p>No account? <a href="#" onclick="flipToRegister()">Register here</a></p>
+            </div>
+
+            <!-- REGISTER -->
+            <div class="back">
+                <button class="back-btn" onclick="flipToLogin()">✕</button>
+                <h2 id="registerTitle">Create Customer Account</h2>
+                <div class="role-caption" id="registerCaption">Fill in your details</div>
+
+                <input type="text" id="newUser" placeholder="Username" autocomplete="off">
+                <input type="email" id="newEmail" placeholder="Email" autocomplete="off">
+                <input type="password" id="newPass" placeholder="Password (min 8 chars)" autocomplete="off">
+
+                <!-- password strength meter -->
+                <div class="pw-meter-track" id="pwMeterTrack">
+                    <div class="pw-meter-seg"></div>
+                    <div class="pw-meter-seg"></div>
+                    <div class="pw-meter-seg"></div>
+                    <div class="pw-meter-seg"></div>
+                </div>
+                <div class="pw-meter-label" id="pwMeterLabel"></div>
+                <ul class="pw-req-list" id="pwReqList">
+                    <li id="reqLen">At least 8 characters</li>
+                    <li id="reqUpper">One uppercase letter</li>
+                    <li id="reqLower">One lowercase letter</li>
+                    <li id="reqNum">One number</li>
+                    <li id="reqSym">One special character (!@#$...)</li>
+                </ul>
+
+                <input type="password" id="newPassConfirm" placeholder="Confirm Password" autocomplete="off">
+
+                <!-- seller & rider only -->
+                <input type="tel" id="newPhone" placeholder="Contact Number (e.g. 09XXXXXXXXX)" autocomplete="off" class="hidden-field">
+
+                <!-- seller-only -->
+                <input type="text" id="newShopName" placeholder="Shop Name" autocomplete="off" class="hidden-field">
+
+                <!-- rider-only -->
+                <input type="text" id="newVehicle" placeholder="Vehicle (e.g. Motorcycle)" autocomplete="off" class="hidden-field">
+
+                <!-- customer & seller -->
+                <label class="file-label" id="picLabel" for="profilePic">Profile Picture</label>
+                <input type="file" id="profilePic" accept="image/*">
+                <img id="preview" src="" alt="Preview">
+
+                <button class="primary" id="registerBtn" onclick="register()">Register</button>
+                <div class="separator"></div>
+                <p>Already have an account? <a href="#" onclick="flipToLogin()">Login here</a></p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",
+    authDomain: "dalocal-8ceb3.firebaseapp.com",
+    projectId: "dalocal-8ceb3",
+    storageBucket: "dalocal-8ceb3.appspot.com",
+    messagingSenderId: "737186112999",
+    appId: "1:737186112999:web:f61d20523f4ac479f8c942"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// role config: collection name, redirect page, storage key names, label
+const ROLES = {
+    customer: { collection: "customers", redirect: "foruzer.html",           localKey: "currentCustomer", localUidKey: "currentCustomerUID", label: "Customer", needsShop:false, needsVehicle:false, needsPhone:false, needsPic:true  },
+    seller:   { collection: "sellers",   redirect: "homeseller.html",        localKey: "currentSeller",   localUidKey: "currentSellerUID",   label: "Seller",   needsShop:true,  needsVehicle:false, needsPhone:true,  needsPic:true  },
+    rider:    { collection: "riders",    redirect: "rider-home.html",     localKey: "currentRider",    localUidKey: "currentRiderUID",    label: "Rider", needsShop:false, needsVehicle:true,  needsPhone:true,  needsPic:true  }
+};
+
+let currentRole = "customer";
+
+function showLoading(msg){ document.getElementById("loadingMsg").textContent = msg || "Please wait..."; document.getElementById("loadingOverlay").classList.add("show"); }
+function hideLoading(){ document.getElementById("loadingOverlay").classList.remove("show"); }
+
+window.selectRole = function(role){
+    currentRole = role;
+    document.querySelectorAll(".role-tab").forEach(t => t.classList.toggle("active", t.dataset.role === role));
+
+    const cfg = ROLES[role];
+    document.getElementById("loginTitle").textContent = cfg.label + " Login";
+    document.getElementById("registerTitle").textContent = "Create " + cfg.label + " Account";
+    document.getElementById("registerCaption").textContent = "Fill in your details";
+    document.getElementById("forgotLink").href = "forgot-password.html?from=login.html&role=" + role;
+
+    document.getElementById("newPhone").classList.toggle("hidden-field", !cfg.needsPhone);
+    document.getElementById("newShopName").classList.toggle("hidden-field", !cfg.needsShop);
+    document.getElementById("newVehicle").classList.toggle("hidden-field", !cfg.needsVehicle);
+    document.getElementById("profilePic").classList.toggle("hidden-field", !cfg.needsPic);
+    document.getElementById("picLabel").classList.toggle("hidden-field", !cfg.needsPic);
+    document.getElementById("preview").style.display = "none";
+    document.getElementById("preview").src = "";
+
+    clearAllFields();
+};
+
+// Wipes every login & register field (and the password strength UI) so
+// switching roles never carries over what was typed for a different role.
+function clearAllFields(){
+    // login fields
+    document.getElementById("loginEmail").value = "";
+    document.getElementById("loginPass").value = "";
+
+    // register fields
+    document.getElementById("newUser").value = "";
+    document.getElementById("newEmail").value = "";
+    document.getElementById("newPass").value = "";
+    document.getElementById("newPassConfirm").value = "";
+    document.getElementById("newPhone").value = "";
+    document.getElementById("newShopName").value = "";
+    document.getElementById("newVehicle").value = "";
+    document.getElementById("profilePic").value = "";
+
+    // reset password strength meter UI back to empty state
+    renderStrengthUI("");
+}
+
+window.flipToRegister = () => document.getElementById("flipContainer").classList.add("flipped");
+window.flipToLogin    = () => document.getElementById("flipContainer").classList.remove("flipped");
+window.goBack          = () => { window.location.href = "index.html"; };
+
+document.getElementById("profilePic").addEventListener("change", function () {
+    const file = this.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = e => { const p = document.getElementById("preview"); p.src = e.target.result; p.style.display = "block"; };
+        reader.readAsDataURL(file);
+    }
+});
+
+/* ───────────────── Password strength logic ───────────────── */
+
+// Small blocklist of very common / easily-guessed passwords.
+const COMMON_PASSWORDS = new Set([
+    "password","password1","12345678","123456789","qwerty123",
+    "letmein123","admin123","welcome123","iloveyou1","abc123456"
+]);
+
+function evaluatePassword(pw, username, email) {
+    const checks = {
+        len:   pw.length >= 8,
+        upper: /[A-Z]/.test(pw),
+        lower: /[a-z]/.test(pw),
+        num:   /[0-9]/.test(pw),
+        sym:   /[^A-Za-z0-9]/.test(pw)
+    };
+
+    const uname = (username || "").trim().toLowerCase();
+    const localPart = (email || "").split("@")[0].trim().toLowerCase();
+    const lowerPw = pw.toLowerCase();
+
+    const isCommon = COMMON_PASSWORDS.has(lowerPw);
+    const containsUsername = uname.length >= 3 && lowerPw.includes(uname);
+    const containsEmail = localPart.length >= 3 && lowerPw.includes(localPart);
+
+    const passedCount = Object.values(checks).filter(Boolean).length;
+
+    // Overall pass/fail for allowing registration.
+    const isStrongEnough = checks.len && checks.upper && checks.lower && checks.num && checks.sym
+        && !isCommon && !containsUsername && !containsEmail;
+
+    return { checks, passedCount, isCommon, containsUsername, containsEmail, isStrongEnough };
+}
+
+function renderStrengthUI(pw) {
+    const username = document.getElementById("newUser").value;
+    const email = document.getElementById("newEmail").value;
+    const result = evaluatePassword(pw, username, email);
+
+    // requirement checklist ✓ marks
+    document.getElementById("reqLen").classList.toggle("met", result.checks.len);
+    document.getElementById("reqUpper").classList.toggle("met", result.checks.upper);
+    document.getElementById("reqLower").classList.toggle("met", result.checks.lower);
+    document.getElementById("reqNum").classList.toggle("met", result.checks.num);
+    document.getElementById("reqSym").classList.toggle("met", result.checks.sym);
+
+    // 4-segment strength bar
+    const segs = document.querySelectorAll("#pwMeterTrack .pw-meter-seg");
+    let score = result.passedCount; // 0-5
+    if (result.isCommon || result.containsUsername || result.containsEmail) score = Math.min(score, 1);
+    const filled = Math.min(4, Math.round((score / 5) * 4));
+
+    const colors = ["#ff4b5c", "#ff9f43", "#f6c344", "#6fdc8c"];
+    segs.forEach((seg, i) => {
+        seg.style.background = i < filled ? colors[Math.min(filled, 4) - 1] : "rgba(255,255,255,0.15)";
+    });
+
+    const label = document.getElementById("pwMeterLabel");
+    if (pw.length === 0) {
+        label.textContent = "";
+    } else if (result.isCommon) {
+        label.textContent = "This password is too common — choose another.";
+        label.style.color = "#ff4b5c";
+    } else if (result.containsUsername || result.containsEmail) {
+        label.textContent = "Avoid using your username or email in your password.";
+        label.style.color = "#ff4b5c";
+    } else if (result.isStrongEnough) {
+        label.textContent = "Strong password ✓";
+        label.style.color = "#6fdc8c";
+    } else if (filled >= 2) {
+        label.textContent = "Fair — meet all requirements below.";
+        label.style.color = "#f6c344";
+    } else {
+        label.textContent = "Weak password.";
+        label.style.color = "#ff4b5c";
+    }
+
+    return result;
+}
+
+const newPassInput = document.getElementById("newPass");
+newPassInput.addEventListener("input", () => renderStrengthUI(newPassInput.value));
+document.getElementById("newUser").addEventListener("input", () => renderStrengthUI(newPassInput.value));
+document.getElementById("newEmail").addEventListener("input", () => renderStrengthUI(newPassInput.value));
+
+/* ───────────────── end password strength logic ───────────────── */
+
+function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = e => {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                let w = img.width, h = img.height;
+                const maxDim = 400;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+                let quality = 0.75;
+                let dataUrl = canvas.toDataURL("image/jpeg", quality);
+                while (dataUrl.length > 200 * 1024 * 1.37 && quality > 0.15) {
+                    quality -= 0.1;
+                    dataUrl = canvas.toDataURL("image/jpeg", quality);
+                }
+                resolve(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function syncToLocalStorage(role, data, uid) {
+    const cfg = ROLES[role];
+    localStorage.setItem(cfg.localKey, data.username);
+    localStorage.setItem(cfg.localUidKey, uid);
+    if (role === "seller") localStorage.setItem("currentSellerPic", data.profilePic || "");
+}
+
+// Look up which of the three collections this uid belongs to.
+// Checks the currently-selected role first (fast path), then falls back to the others.
+async function findAccount(uid) {
+    const order = [currentRole, ...Object.keys(ROLES).filter(r => r !== currentRole)];
+    for (const role of order) {
+        const snap = await getDoc(doc(db, ROLES[role].collection, uid));
+        if (snap.exists()) return { role, data: snap.data() };
+    }
+    return null;
+}
+
+window.login = async function () {
+    const email    = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPass").value.trim();
+    if (!email || !password) { alert("Please enter your email and password."); return; }
+
+    showLoading("Logging in...");
+    try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
+        const account = await findAccount(uid);
+
+        if (!account) {
+            hideLoading();
+            alert("No account profile found for this login. Please register first.");
+            return;
+        }
+
+        syncToLocalStorage(account.role, account.data, uid);
+        hideLoading();
+
+        if (account.role !== currentRole) {
+            alert("This account is registered as a " + ROLES[account.role].label + " account. Signing you in there.");
+        }
+        window.location.href = ROLES[account.role].redirect;
+    } catch (err) {
+        hideLoading();
+        const bad = ["auth/user-not-found","auth/wrong-password","auth/invalid-credential","auth/invalid-email"];
+        alert(bad.includes(err.code) ? "Invalid email or password. Please try again." : "Login error: " + err.message);
+    }
+};
+
+window.register = async function () {
+    const cfg = ROLES[currentRole];
+
+    const username  = document.getElementById("newUser").value.trim();
+    const email     = document.getElementById("newEmail").value.trim();
+    const password  = document.getElementById("newPass").value.trim();
+    const confirm   = document.getElementById("newPassConfirm").value.trim();
+    const phone     = document.getElementById("newPhone").value.trim();
+    const shopName  = document.getElementById("newShopName").value.trim();
+    const vehicle   = document.getElementById("newVehicle").value.trim();
+    const imageFile = document.getElementById("profilePic").files[0];
+
+    if (!username || !email || !password) { alert("Please fill in all required fields."); return; }
+
+    // ── Strong password enforcement ──
+    const strength = evaluatePassword(password, username, email);
+    if (!strength.isStrongEnough) {
+        let msg = "Your password isn't strong enough yet. It must have:\n"
+                + "- At least 8 characters\n"
+                + "- An uppercase and a lowercase letter\n"
+                + "- A number\n"
+                + "- A special character (e.g. !@#$%)\n"
+                + "- No common passwords, and not contain your username or email.";
+        alert(msg);
+        return;
+    }
+    if (password !== confirm) { alert("Passwords do not match. Please re-enter."); return; }
+
+    if (cfg.needsPhone && !phone) { alert("Please enter your contact number."); return; }
+    if (cfg.needsShop && !shopName) { alert("Please enter your shop name."); return; }
+    if (cfg.needsPic && !imageFile) { alert("Please upload a profile picture."); return; }
+
+    showLoading(cfg.needsPic ? "Compressing image..." : "Creating your account...");
+    try {
+        let profilePic = "";
+        if (cfg.needsPic) profilePic = await compressImage(imageFile);
+
+        showLoading("Creating your " + cfg.label.toLowerCase() + " account...");
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
+
+        const accountData = {
+            uid, username, email,
+            createdAt: new Date().toISOString(),
+            role: currentRole
+        };
+        if (cfg.needsPic) accountData.profilePic = profilePic;
+        if (cfg.needsPhone) accountData.phone = phone;
+        if (cfg.needsShop) accountData.shopName = shopName;
+        if (cfg.needsVehicle) accountData.vehicle = vehicle || "—";
+
+        await setDoc(doc(db, cfg.collection, uid), accountData);
+
+        if (currentRole === "seller") {
+            await setDoc(doc(db, "stores", uid), { name: shopName, photo: profilePic, location: "Local Store", seller: username, sellerUID: uid });
+            // Also seed sellerProfiles/{username} with the contact number so
+            // profile-seller.html shows it right away without needing a
+            // manual edit — it merges, so future edits there aren't overwritten.
+            await setDoc(doc(db, "sellerProfiles", username), { username, phoneNumber: phone }, { merge: true });
+        }
+
+        await signOut(auth);
+        hideLoading();
+        localStorage.removeItem(cfg.localKey);
+        localStorage.removeItem(cfg.localUidKey);
+        if (currentRole === "seller") localStorage.removeItem("currentSellerPic");
+
+        alert("Registered successfully! Please login to continue, " + username + ".");
+        window.flipToLogin();
+    } catch (err) {
+        hideLoading();
+        if (err.code === "auth/email-already-in-use") alert("This email is already registered. Please login instead.");
+        else alert("Registration error: " + err.message);
+    }
+};
+</script>
+</body>
+</html>

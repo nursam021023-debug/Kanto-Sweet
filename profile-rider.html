@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider Profile</title>
+    <link rel="stylesheet" href="profile-rider.css">
+</head>
+<body>
+
+    <!-- BACK BUTTON -->
+    <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+
+    <!-- BANNER -->
+    <div class="banner">
+        <div class="banner-bg" id="bannerBg"></div>
+        <div class="banner-overlay"></div>
+
+        <!-- Edit photo button bottom-right -->
+        <label class="edit-logo-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Change Photo
+            <input type="file" id="photoUpload" accept="image/*" style="display:none;">
+        </label>
+
+        <!-- Profile + Name row -->
+        <div class="banner-content">
+            <img class="banner-logo" id="profilePic" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23555'/%3E%3C/svg%3E" alt="Profile">
+            <div class="banner-info">
+                <h1 id="riderName">Rider Name</h1>
+                <span class="rider-tag">🏍️ Rider</span><br>
+                <span class="edit-link" onclick="editField('riderName','Your Name')">Edit</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFO CARD -->
+    <div class="info-card">
+        <span class="card-title">Rider Info</span>
+        <div class="info-row"><span><strong>Phone Number:</strong> <span id="phoneNumber">—</span></span><span class="edit-link" onclick="editField('phoneNumber','Phone Number')">Edit</span></div>
+        <div class="info-row"><span><strong>Vehicle:</strong> <span id="vehicle">—</span></span><span class="edit-link" onclick="editField('vehicle','Vehicle (e.g. Motorcycle)')">Edit</span></div>
+        <div class="info-row"><span><strong>Status:</strong> <span id="availability">—</span></span></div>
+        <div class="info-row" style="flex-direction:column; align-items:flex-start;">
+            <span><strong>About Me:</strong></span>
+            <p id="aboutMe" style="margin-top:6px; color:#ddd; font-size:0.85rem;">—</p>
+            <span class="edit-link" onclick="editField('aboutMe','About Me')">Edit</span>
+        </div>
+    </div>
+
+    <!-- RATINGS & SAFETY -->
+    <div class="info-card">
+        <span class="card-title">⭐ Ratings & Delivery Safety</span>
+
+        <div class="rating-summary">
+            <div class="rating-score-block">
+                <div class="rating-score-num" id="avgRatingNum">—</div>
+                <div class="rating-stars" id="avgRatingStars">☆☆☆☆☆</div>
+                <div class="rating-count" id="ratingCount">0 ratings</div>
+            </div>
+            <div class="stat-mini-grid">
+                <div class="stat-mini">
+                    <div class="stat-mini-num" id="totalDeliveries">0</div>
+                    <div class="stat-mini-label">Deliveries</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-mini-num" id="safetyPercent">—</div>
+                    <div class="stat-mini-label">Safety Score</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="safety-block">
+            <div class="safety-label-row">
+                <span>How safe customers feel with this rider's deliveries</span>
+                <strong id="safetyPercentLabel">—</strong>
+            </div>
+            <div class="safety-bar-track">
+                <div class="safety-bar-fill" id="safetyBarFill" style="width:0%; background:#555;"></div>
+            </div>
+            <p class="safety-note" id="safetyNote">Based on customer ratings after each delivery.</p>
+        </div>
+
+        <div class="review-list" id="reviewList">
+            <!-- filled by JS, or shows empty state -->
+        </div>
+    </div>
+
+    <!-- SAVE BUTTON -->
+    <!-- Kept as a manual "final confirm" (also syncs riderName -> localStorage),
+         pero hindi na ito ang tanging paraan para ma-save ang phone/vehicle/aboutMe:
+         iyon ay sine-save na agad ng editField() sa ibaba, bawat successful edit. -->
+    <div class="save-wrap">
+        <button class="save-btn" onclick="saveProfile()">Save Profile</button>
+    </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = { apiKey:"AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",authDomain:"dalocal-8ceb3.firebaseapp.com",projectId:"dalocal-8ceb3",storageBucket:"dalocal-8ceb3.appspot.com",messagingSenderId:"737186112999",appId:"1:737186112999:web:f61d20523f4ac479f8c942" };
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+const currentRider = localStorage.getItem("currentRider");
+const riderUID = localStorage.getItem("currentRiderUID") || "";
+if (!currentRider) {
+    alert("Please login first.");
+    window.location.href = "login.html";
+}
+
+const placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23555'/%3E%3C/svg%3E";
+
+document.getElementById("riderName").innerText = currentRider;
+
+// ── LOAD PROFILE ──────────────────────────────────────
+(async () => {
+    try {
+        const { getDeliveryByUsername, getDeliveredOrdersByRider, getRatingsByRider } = await import('./db.js');
+
+        const data = await getDeliveryByUsername(currentRider);
+        if (data) {
+            if (data.profilePic) {
+                document.getElementById("profilePic").src = data.profilePic;
+                document.getElementById("bannerBg").style.backgroundImage = `url('${data.profilePic}')`;
+            }
+            document.getElementById("riderName").innerText = data.username || currentRider;
+            document.getElementById("phoneNumber").innerText = data.phone || data.phoneNumber || "—";
+            document.getElementById("vehicle").innerText = data.vehicle || "—";
+            document.getElementById("aboutMe").innerText = data.aboutMe || "No bio yet. Tap Edit to add one.";
+            document.getElementById("availability").innerText = data.available === false ? "Offline" : "Available";
+        } else {
+            document.getElementById("aboutMe").innerText = "No bio yet. Tap Edit to add one.";
+        }
+
+        // Total deliveries completed
+        try {
+            const delivered = await getDeliveredOrdersByRider(currentRider);
+            document.getElementById("totalDeliveries").innerText = delivered ? delivered.length : 0;
+        } catch (e) { console.error("Delivered count failed:", e); }
+
+        // Ratings + safety score
+        try {
+            const ratings = await getRatingsByRider(currentRider);
+            renderRatings(ratings || []);
+        } catch (e) {
+            console.error("Ratings load failed:", e);
+            renderRatings([]);
+        }
+    } catch (e) {
+        console.error("Profile load failed:", e);
+        renderRatings([]);
+    }
+})();
+
+function renderRatings(ratings) {
+    const countEl   = document.getElementById("ratingCount");
+    const numEl     = document.getElementById("avgRatingNum");
+    const starsEl   = document.getElementById("avgRatingStars");
+    const pctEl     = document.getElementById("safetyPercent");
+    const pctLabel  = document.getElementById("safetyPercentLabel");
+    const barFill   = document.getElementById("safetyBarFill");
+    const noteEl    = document.getElementById("safetyNote");
+    const listEl    = document.getElementById("reviewList");
+
+    if (!ratings.length) {
+        numEl.innerText = "—";
+        starsEl.innerText = "☆☆☆☆☆";
+        countEl.innerText = "0 ratings";
+        pctEl.innerText = "—";
+        pctLabel.innerText = "No data yet";
+        barFill.style.width = "0%";
+        barFill.style.background = "#555";
+        noteEl.innerText = "This rider has no ratings yet. The safety score fills in once customers rate their deliveries.";
+        listEl.innerHTML = `
+            <div class="empty-ratings">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><br>
+                No ratings yet.<br>They'll appear here once customers rate a delivery.
+            </div>`;
+        return;
+    }
+
+    // Average overall rating (falls back to "rating" if no separate safetyRating field)
+    const scores = ratings.map(r => Number(r.rating) || 0).filter(n => n > 0);
+    const avg = scores.length ? (scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
+
+    const safetyScores = ratings.map(r => Number(r.safetyRating ?? r.rating) || 0).filter(n => n > 0);
+    const safetyAvg = safetyScores.length ? (safetyScores.reduce((a,b) => a+b, 0) / safetyScores.length) : 0;
+    const safetyPct = Math.round((safetyAvg / 5) * 100);
+
+    numEl.innerText = avg.toFixed(1);
+    starsEl.innerText = starString(avg);
+    countEl.innerText = ratings.length + (ratings.length === 1 ? " rating" : " ratings");
+
+    pctEl.innerText = safetyPct + "%";
+    pctLabel.innerText = safetyPct + "%";
+    barFill.style.width = safetyPct + "%";
+    barFill.style.background = safetyPct >= 80 ? "#3ddc84" : safetyPct >= 50 ? "#f6c344" : "#ff4b5c";
+    noteEl.innerText = safetyPct >= 80
+        ? "Customers consistently feel safe with this rider's deliveries."
+        : safetyPct >= 50
+            ? "Mostly positive feedback, with some room to improve."
+            : "This rider's deliveries have received some safety concerns from customers.";
+
+    // Recent reviews (latest first, show up to 5)
+    const sorted = [...ratings].sort((a,b) => {
+        const ta = a.ratedAt?.seconds || 0, tb = b.ratedAt?.seconds || 0;
+        return tb - ta;
+    }).slice(0, 5);
+
+    listEl.innerHTML = sorted.map(r => {
+        const stars = starString(Number(r.rating) || 0);
+        const comment = (r.comment || r.review || "").trim();
+        const date = r.ratedAt?.seconds ? new Date(r.ratedAt.seconds * 1000).toLocaleDateString() : "";
+        return `
+            <div class="review-card">
+                <div class="review-top">
+                    <span class="review-stars">${stars}</span>
+                    <span class="review-date">${date}</span>
+                </div>
+                ${comment ? `<div class="review-comment">${escapeHtml(comment)}</div>` : ""}
+            </div>`;
+    }).join("");
+}
+
+function starString(avg) {
+    const rounded = Math.round(avg);
+    return "★".repeat(Math.max(0, Math.min(5, rounded))) + "☆".repeat(5 - Math.max(0, Math.min(5, rounded)));
+}
+
+function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.innerText = str;
+    return div.innerHTML;
+}
+
+// ── PHOTO UPLOAD ───────────────────────────────────────
+function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = e => {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                let w = img.width, h = img.height, maxDim = 400;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+                let quality = 0.75, dataUrl = canvas.toDataURL("image/jpeg", quality);
+                while (dataUrl.length > 200 * 1024 * 1.37 && quality > 0.15) { quality -= 0.1; dataUrl = canvas.toDataURL("image/jpeg", quality); }
+                resolve(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+document.getElementById("photoUpload").addEventListener("change", async function () {
+    const file = this.files[0];
+    if (!file) return;
+    try {
+        const newPic = await compressImage(file);
+        document.getElementById("profilePic").src = newPic;
+        document.getElementById("bannerBg").style.backgroundImage = `url('${newPic}')`;
+
+        const { updateRiderProfile } = await import("./db.js");
+        if (riderUID) await updateRiderProfile(riderUID, { profilePic: newPic });
+        alert("Profile photo updated! Click Save Profile to keep all changes.");
+    } catch (err) {
+        console.error(err);
+        alert("Could not process image. Please try a smaller photo.");
+    }
+});
+
+// ── EDIT HELPERS ──────────────────────────────────────
+// FIX: dating on-screen text lang ang binabago nito (walang Firestore write),
+// kaya kung nakalimutan i-click ang "Save Profile" button, nawawala/hindi
+// nase-save ang phone/vehicle/aboutMe/pangalan. Ngayon, agad itong nagsa-save
+// sa Firestore sa bawat successful edit — hindi na kailangang umasa sa
+// hiwalay na "Save Profile" click.
+//
+// Mapping ng field id -> Firestore key na ginagamit ng ibang page (tulad ng
+// to-receive.html na bumabasa ng riderProfile.phone / riderProfile.vehicle).
+const FIELD_TO_DB_KEY = {
+    riderName:   "username",
+    phoneNumber: "phone",
+    vehicle:     "vehicle",
+    aboutMe:     "aboutMe"
+};
+
+window.editField = async function (id, label) {
+    const el = document.getElementById(id);
+    const cur = el.innerText;
+    const isPlaceholder = (cur === "—" || cur === "No bio yet. Tap Edit to add one.");
+    const nv = prompt("Edit " + label + ":", isPlaceholder ? "" : cur);
+
+    if (nv === null) return;          // user cancelled — walang binago
+    const trimmed = nv.trim();
+    if (trimmed === "") return;       // walang binago kung blangko
+
+    el.innerText = trimmed;
+
+    if (!riderUID) {
+        console.warn("No riderUID in localStorage — hindi ma-save sa Firestore.");
+        return;
+    }
+
+    const dbKey = FIELD_TO_DB_KEY[id];
+    if (!dbKey) return;
+
+    try {
+        const { updateRiderProfile } = await import("./db.js");
+        await updateRiderProfile(riderUID, { [dbKey]: trimmed });
+
+        // Kapag pangalan ang na-edit, i-sync din agad sa localStorage
+        // (ginagamit ito ng ibang pages para malaman kung sino ang naka-login).
+        if (id === "riderName") {
+            localStorage.setItem("currentRider", trimmed);
+        }
+    } catch (e) {
+        console.error("Auto-save failed for " + dbKey + ":", e);
+        alert("Na-update sa screen pero hindi na-save sa server. Subukan ulit o i-check ang connection.");
+    }
+};
+
+// ── SAVE (manual "Save Profile" button) ────────────────
+// Panatag na rin ito bilang final/explicit save (nagsisilbing safety net at
+// nag-sync ng lahat ng fields sabay-sabay), pero HINDI na ito ang tanging
+// paraan para ma-persist ang mga edit — editField() sa itaas ang gumagawa
+// niyan agad bawat pag-edit.
+window.saveProfile = async function () {
+    const newName = document.getElementById("riderName").innerText.trim();
+    if (!newName) { alert("Name cannot be empty."); return; }
+
+    const updates = {
+        username: newName,
+        phone:     document.getElementById("phoneNumber").innerText.trim(),
+        vehicle:   document.getElementById("vehicle").innerText.trim(),
+        aboutMe:   document.getElementById("aboutMe").innerText.trim()
+    };
+
+    try {
+        const { updateRiderProfile } = await import("./db.js");
+        if (riderUID) await updateRiderProfile(riderUID, updates);
+        localStorage.setItem("currentRider", newName);
+        alert("Profile saved!");
+    } catch (e) {
+        alert("Failed to save: " + e.message);
+    }
+};
+
+window.goBack = function () {
+    window.location.href = "rider-home.html";
+};
+</script>
+</body>
+</html>

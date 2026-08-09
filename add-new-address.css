@@ -1,0 +1,171 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background: #111;
+    color: #fff;
+    min-height: 100vh;
+    padding-bottom: 60px;
+}
+
+/* BACK BUTTON */
+.back-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 100;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 18px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: background 0.3s;
+}
+.back-btn:hover { background: rgba(255,255,255,0.15); }
+
+/* PAGE TITLE */
+.page-title {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    padding: 24px 16px 16px;
+    color: #fff;
+}
+
+/* FORM CARD */
+.form-card {
+    background: #1e1e1e;
+    border-radius: 16px;
+    margin: 0 16px;
+    padding: 24px 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+/* FORM GROUP */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #aaa;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="tel"] {
+    width: 100%;
+    background: #2a2a2a;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-size: 0.9rem;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    border-color: #5bc8f5;
+}
+
+.form-group input::placeholder {
+    color: #555;
+}
+
+.optional {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* LABEL BUTTONS */
+.label-options {
+    display: flex;
+    gap: 10px;
+}
+
+.label-btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    background: transparent;
+    color: #aaa;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.2s;
+}
+
+.label-btn.active {
+    border-color: #5bc8f5;
+    color: #5bc8f5;
+    background: rgba(91,200,245,0.08);
+}
+
+.label-btn:hover {
+    border-color: #5bc8f5;
+    color: #5bc8f5;
+}
+
+/* CHECKBOX */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #5bc8f5;
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: #ccc;
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: pointer;
+}
+
+/* SAVE BUTTON */
+.save-btn {
+    width: 100%;
+    margin-top: 8px;
+    background: linear-gradient(135deg, #1a1a1a, #3a0000, #800000);
+    color: #fff;
+    border: 1px solid rgba(180,0,0,0.5);
+    padding: 13px;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(128,0,0,0.4);
+}
+
+.save-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(180,0,0,0.6);
+}

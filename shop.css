@@ -1,0 +1,218 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background: #111;
+    color: #fff;
+    min-height: 100vh;
+}
+
+/* BACK BUTTON */
+.back-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 100;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 18px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background: rgba(255,255,255,0.15);
+    transform: translateX(-3px);
+}
+
+/* BANNER */
+.banner {
+    width: 100%;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    padding: 0 40px;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 3px solid rgba(255,255,255,0.1);
+}
+
+/* blurred store photo as background */
+.banner-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(6px) brightness(0.55);
+    transform: scale(1.1);
+    z-index: 0;
+}
+
+.banner-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 1;
+}
+
+.banner-logo {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #fff;
+    box-shadow: 0 0 20px rgba(255,255,255,0.4);
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+}
+
+.banner-info {
+    position: relative;
+    z-index: 2;
+}
+
+.banner-info h1 {
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.banner-info p {
+    font-size: 1rem;
+    color: #eee;
+    margin-top: 6px;
+    font-weight: 600;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+}
+
+/* MENU SECTION */
+.menu-section {
+    padding: 30px 25px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.menu-section h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.top-label {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    color: #ccc;
+    margin-bottom: 20px;
+}
+
+/* PRODUCT GRID */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 15px;
+}
+
+/* PRODUCT CARD */
+.product-card {
+    background: #1e1e1e;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+}
+
+.product-card img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+}
+
+.product-card h4 {
+    padding: 8px 10px 2px;
+    font-size: 0.95rem;
+    color: #fff;
+}
+
+.product-card p {
+    padding: 0 10px 10px;
+    font-size: 0.85rem;
+    color: #aaa;
+}
+
+.empty {
+    color: #888;
+    font-style: italic;
+    margin-top: 20px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+    .banner {
+        height: auto;
+        padding: 60px 20px 20px;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* SHOP INFO CARD */
+.shop-info-card {
+    max-width: 1000px;
+    margin: 0 auto 40px;
+    padding: 25px;
+    background: #1a1a1a;
+    border-radius: 16px;
+    box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+}
+
+.shop-info-card p {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 14px;
+    line-height: 1.6;
+}
+
+.shop-info-card p span {
+    font-weight: 400;
+    color: #ccc;
+}
+
+.shop-info-card a {
+    font-weight: 400;
+    color: #5bc8f5;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.shop-info-card a:hover {
+    text-decoration: underline;
+}

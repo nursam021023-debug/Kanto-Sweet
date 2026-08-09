@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages - Customer</title>
+<link rel="stylesheet" href="messages.css">
+</head>
+<body>
+ 
+<div class="app">
+ 
+    <!-- HEADER -->
+    <div class="top-bar">
+        <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+        <h2>Messages</h2>
+        <span id="customer-label"></span>
+    </div>
+ 
+    <div class="main" id="main">
+ 
+        <!-- SIDEBAR: store list -->
+        <div class="sidebar">
+            <div class="sidebar-header">Stores</div>
+            <div id="contact-list"><div class="empty-sidebar">Loading stores...</div></div>
+        </div>
+ 
+        <!-- CHAT AREA -->
+        <div class="chat-area" id="chat-area">
+            <div class="no-chat">Select a store to message</div>
+        </div>
+ 
+    </div>
+</div>
+ 
+<!-- REPLACE the <script type="module"> block in messages-customer.html -->
+<script type="module">
+
+import {
+    getAllStores,
+    getMessages,
+    sendMessage,
+    getThreadsForCustomer,
+    markMessagesRead
+} from "./db.js";
+
+const currentCustomer = localStorage.getItem("currentCustomer");
+if (!currentCustomer) {
+    alert("Please login first.");
+    window.location.href = "login.html";
+}
+
+document.getElementById("customer-label").innerText = currentCustomer;
+
+let activeStore = null;
+let allStores   = [];
+let threadMap   = {};
+
+async function init() {
+    allStores  = await getAllStores();
+    await refreshThreads();
+    renderSidebar();
+}
+
+async function refreshThreads() {
+    const threads = await getThreadsForCustomer(currentCustomer);
+    threadMap = {};
+    threads.forEach(t => {
+        const msgs = t.messages.sort((a, b) => (a.sentAt?.seconds || 0) - (b.sentAt?.seconds || 0));
+        const last = msgs[msgs.length - 1];
+        // Only count messages FROM seller that are unread
+        const unread = msgs.filter(m => m.sender === "seller" && m.read === false).length;
+        threadMap[t.sellerUsername] = { last, unread };
+    });
+}
+
+function renderSidebar() {
+    const list = document.getElementById("contact-list");
+    list.innerHTML = "";
+
+    if (allStores.length === 0) {
+        list.innerHTML = "<div class='empty-sidebar'>No stores available</div>";
+        return;
+    }
+
+    allStores.forEach(store => {
+        const info   = threadMap[store.seller] || {};
+        const last   = info.last;
+        const unread = info.unread || 0;
+
+        const div = document.createElement("div");
+        div.className = "contact" + (activeStore?.seller === store.seller ? " active" : "");
+        div.innerHTML = `
+            <div class="avatar av-seller" style="overflow:hidden;padding:0">
+                ${store.photo
+                    ? `<img src="${store.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+                    : store.name.substring(0,2).toUpperCase()}
+            </div>
+            <div class="contact-info">
+                <div class="contact-name">${store.name}</div>
+                <div class="contact-preview">${last ? last.text.substring(0,30) : "Start a conversation"}</div>
+            </div>
+            ${unread ? `<span class="unread">${unread}</span>` : ""}
+        `;
+        div.onclick = () => openChat(store);
+        list.appendChild(div);
+    });
+}
+
+async function openChat(store) {
+    activeStore = store;
+    renderSidebar();
+    document.getElementById("main").classList.add("chat-open");
+
+    const chatArea = document.getElementById("chat-area");
+    chatArea.innerHTML = `
+        <div class="chat-header">
+            <button class="chat-back-btn" onclick="closeChatProxy()" title="Back to stores">&#8592;</button>
+            <div class="avatar av-seller" style="width:28px;height:28px;overflow:hidden;padding:0">
+                ${store.photo
+                    ? `<img src="${store.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+                    : store.name.substring(0,2).toUpperCase()}
+            </div>
+            <div>
+                <div class="chat-header-name">${store.name}</div>
+                <div class="chat-header-status">Store</div>
+            </div>
+        </div>
+        <div class="messages" id="msg-list"><div style="text-align:center;padding:20px;opacity:.5">Loading…</div></div>
+        <div class="input-area">
+            <textarea class="msg-input" id="msg-input" placeholder="Type a message..." onkeydown="handleKeyProxy(event)"></textarea>
+            <button class="send-btn" id="send-btn">Send</button>
+        </div>
+    `;
+
+    document.getElementById("send-btn").onclick = sendMsg;
+
+    // Mark seller's messages as read (customer is reading)
+    const threadId = [currentCustomer, store.seller].sort().join("__");
+    await markMessagesRead(threadId, "customer");
+
+    await refreshThreads();
+    renderSidebar();
+    await renderMessages();
+}
+
+async function renderMessages() {
+    const list = document.getElementById("msg-list");
+    if (!list || !activeStore) return;
+
+    const msgs = await getMessages(currentCustomer, activeStore.seller);
+    list.innerHTML = "";
+
+    if (msgs.length === 0) {
+        list.innerHTML = "<div style='text-align:center;padding:20px;opacity:.5'>No messages yet. Say hello! 👋</div>";
+        return;
+    }
+
+    // Find the last message sent by the customer
+    const lastCustomerMsgIndex = msgs.reduce((lastIdx, m, i) => m.sender === "customer" ? i : lastIdx, -1);
+
+    msgs.forEach((m, i) => {
+        const isSent = m.sender === "customer";
+        const div = document.createElement("div");
+        div.className = "msg " + (isSent ? "sent" : "received");
+        const time = m.sentAt?.seconds
+            ? formatTime(new Date(m.sentAt.seconds * 1000))
+            : "";
+
+        // Show "Seen" only under the last sent message if it has been read
+        const showSeen = isSent && i === lastCustomerMsgIndex && m.read === true;
+
+        div.innerHTML = `
+            <div>${m.text}</div>
+            <div class="msg-time">${time}</div>
+            ${showSeen ? `<div class="msg-seen">Seen ✓</div>` : ""}
+        `;
+        list.appendChild(div);
+    });
+    list.scrollTop = list.scrollHeight;
+}
+
+async function sendMsg() {
+    const input = document.getElementById("msg-input");
+    if (!input || !input.value.trim() || !activeStore) return;
+    const text = input.value.trim();
+    input.value = "";
+    input.disabled = true;
+
+    await sendMessage(currentCustomer, activeStore.seller, "customer", text);
+
+    input.disabled = false;
+    input.focus();
+    await refreshThreads();
+    renderSidebar();
+    await renderMessages();
+}
+
+window.handleKeyProxy = function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMsg();
+    }
+};
+
+window.closeChatProxy = function() {
+    activeStore = null;
+    document.getElementById("main").classList.remove("chat-open");
+    document.getElementById("chat-area").innerHTML = `<div class="no-chat">Select a store to message</div>`;
+    renderSidebar();
+};
+
+function formatTime(date) {
+    let h = date.getHours(), m = date.getMinutes(), ap = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return h + ":" + (m < 10 ? "0" + m : m) + " " + ap;
+}
+
+window.goBack = function() {
+    window.location.href = "foruzer.html";
+};
+
+setInterval(async () => {
+    await refreshThreads();
+    renderSidebar();
+    if (activeStore) await renderMessages();
+}, 5000);
+
+init();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KANTO SWEETS</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="homeseller.css">
+<style>
+/* ── Message icon badge ── */
+.msg-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.msg-icon-wrap:hover { opacity: 0.75; }
+.msg-icon-wrap svg { stroke: #fff; }
+
+.msg-badge {
+    position: absolute;
+    top: -7px;
+    right: -8px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    animation: badge-pop 0.3s ease;
+}
+
+/* ── Notification icon badge ── */
+.notif-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.notif-icon-wrap:hover { opacity: 0.75; }
+.notif-icon-wrap svg { stroke: #fff; }
+
+.notif-badge {
+    position: absolute;
+    top: -7px;
+    right: -8px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    animation: badge-pop 0.3s ease;
+}
+
+@keyframes badge-pop {
+    0%   { transform: scale(0); }
+    70%  { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* ── Approval button ── */
+.approval-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 13px 28px 13px 20px;
+    background: linear-gradient(135deg, #1a472a 0%, #2d6a4f 60%, #40916c 100%);
+    color: #d8f3dc;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 4px 18px rgba(29,90,50,.35), 0 1px 4px rgba(0,0,0,.18);
+    transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+}
+.approval-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 28px rgba(29,90,50,.45), 0 2px 8px rgba(0,0,0,.2);
+    background: linear-gradient(135deg, #1b5e35 0%, #3a7d5c 60%, #52b788 100%);
+}
+.approval-btn:active {
+    transform: scale(.97);
+    box-shadow: 0 2px 10px rgba(29,90,50,.3);
+}
+.approval-btn__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    background: rgba(255,255,255,.12);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+/* ── Approval badge ── */
+.approval-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    animation: badge-pop 0.3s ease;
+    z-index: 2;
+}
+
+.approval-btn__text { flex: 1; }
+.approval-btn__arrow {
+    font-size: 17px;
+    opacity: .7;
+    transition: transform .2s ease, opacity .2s;
+}
+.approval-btn:hover .approval-btn__arrow {
+    transform: translateX(4px);
+    opacity: 1;
+}
+.approval-btn__shine {
+    position: absolute;
+    top: 0; left: -75%;
+    width: 50%; height: 100%;
+    background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,.13) 50%, transparent 100%);
+    transform: skewX(-20deg);
+    transition: left .55s ease;
+    pointer-events: none;
+}
+.approval-btn:hover .approval-btn__shine { left: 130%; }
+
+/* ── Request Rider button ── */
+.rider-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    margin-left: 10px;
+    padding: 13px 28px 13px 20px;
+    background: linear-gradient(135deg, #0c5460 0%, #0a4a56 60%, #083d47 100%);
+    color: #d7f3f7;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 4px 18px rgba(12,84,96,.35), 0 1px 4px rgba(0,0,0,.18);
+    transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+}
+.rider-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 28px rgba(12,84,96,.45), 0 2px 8px rgba(0,0,0,.2);
+    background: linear-gradient(135deg, #0e6272 0%, #0c5460 60%, #157b8f 100%);
+}
+.rider-btn:active {
+    transform: scale(.97);
+    box-shadow: 0 2px 10px rgba(12,84,96,.3);
+}
+.rider-btn__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    background: rgba(255,255,255,.12);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+.rider-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    animation: badge-pop 0.3s ease;
+    z-index: 2;
+}
+.rider-btn__text { flex: 1; }
+.rider-btn__arrow {
+    font-size: 17px;
+    opacity: .7;
+    transition: transform .2s ease, opacity .2s;
+}
+.rider-btn:hover .rider-btn__arrow {
+    transform: translateX(4px);
+    opacity: 1;
+}
+.rider-btn__shine {
+    position: absolute;
+    top: 0; left: -75%;
+    width: 50%; height: 100%;
+    background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,.13) 50%, transparent 100%);
+    transform: skewX(-20deg);
+    transition: left .55s ease;
+    pointer-events: none;
+}
+.rider-btn:hover .rider-btn__shine { left: 130%; }
+
+@media (max-width: 480px) {
+    .approval-btn, .rider-btn { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <input type="checkbox" id="toggler">
+    <label for="toggler" class="fas fa-bars"></label>
+
+    <a href="#" class="logo">K.S<span>.</span></a>
+
+    <nav class="navbar">
+        <a href="#home">home</a>
+        <a href="#about">about</a>
+    </nav>
+
+    <div class="icons">
+        <!-- Message icon with unread badge -->
+        <a href="messages-seller.html" class="msg-icon-wrap" title="Messages">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span class="msg-badge" id="msgBadge" style="display:none;">0</span>
+        </a>
+
+        <!-- Notification bell icon — goes to ratings-notification.html -->
+        <a href="ratings-notification.html" class="notif-icon-wrap" title="Notifications">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+        </a>
+
+        <!-- Profile pic in header -->
+        <img id="sellerPic" class="seller-avatar" src="" alt="Profile"
+             onclick="window.location.href='profile-seller.html'" title="View Profile">
+        <button type="button" class="log-out-btn" onclick="logout()">Log Out</button>
+    </div>
+</header>
+
+<section class="home" id="home">
+    <div class="content">
+
+        <div class="seller-intro">
+            <img id="sellerPicBig" src="" alt="Profile"
+                 onclick="window.location.href='profile-seller.html'" title="View Profile">
+            <div class="seller-intro-text">
+                <h3 id="welcomeName">WELCOME SELLER!!</h3>
+                <span>───── sell with passion ─────</span>
+            </div>
+        </div>
+
+        <a href="seller dashboard.html" class="btn">Put your products</a>
+
+        <div style="position:relative; display:inline-block; margin-top:14px;">
+            <button class="approval-btn" onclick="goToApproval()">
+                <span class="approval-btn__icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 11l3 3L22 4"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                    </svg>
+                </span>
+                <span class="approval-btn__text">Go to Approval</span>
+                <span class="approval-btn__arrow">→</span>
+                <span class="approval-btn__shine"></span>
+            </button>
+            <span class="approval-badge" id="approvalBadge" style="display:none;">0</span>
+        </div>
+
+        <!-- NEW: Request Rider button -->
+        <div style="position:relative; display:inline-block; margin-top:14px;">
+            <button class="rider-btn" onclick="goToRequestRider()">
+                <span class="rider-btn__icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="5.5" cy="17.5" r="2.5"/>
+                        <circle cx="18.5" cy="17.5" r="2.5"/>
+                        <path d="M15 17.5H8.5M3 17.5V13l2-5h6l3 5h4.5a1.5 1.5 0 0 1 1.5 1.5v3"/>
+                        <path d="M9 8V5h4"/>
+                    </svg>
+                </span>
+                <span class="rider-btn__text">Request Rider</span>
+                <span class="rider-btn__arrow">→</span>
+                <span class="rider-btn__shine"></span>
+            </button>
+            <span class="rider-badge" id="riderBadge" style="display:none;">0</span>
+        </div>
+    </div>
+</section>
+
+<!-- ABOUT SECTION -->
+<section class="about" id="about">
+    <h1 class="heading"><span>About</span> Us</h1>
+    <div class="video-container">
+        <video src="images/dalocalvid.mp4" loop autoplay muted playsinline></video>
+    </div>
+    <p class="description">KANTO SWEETS is a platform that connects customers with local sellers, offering a wide range of products from various shops. We aim to support local businesses and provide customers with unique, locally-made items.</p>
+</section>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getUnreadCountForSeller, getPendingOrderCountForSeller } from "./db.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",
+    authDomain: "dalocal-8ceb3.firebaseapp.com",
+    projectId: "dalocal-8ceb3",
+    storageBucket: "dalocal-8ceb3.appspot.com",
+    messagingSenderId: "737186112999",
+    appId: "1:737186112999:web:f61d20523f4ac479f8c942"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+/** Count unread ratings (readBySeller !== true) for a seller */
+async function getUnreadRatingCount(sellerUsername) {
+    try {
+        // ratings collection uses sellerUsername field
+        const snap = await getDocs(query(
+            collection(db, "ratings"),
+            where("sellerUsername", "==", sellerUsername),
+            where("readBySeller", "==", false)
+        ));
+        return snap.size;
+    } catch (e) {
+        console.warn("Could not load rating count:", e);
+        return 0;
+    }
+}
+
+/** Count orders belonging to this seller that still need a rider requested/assigned */
+async function getNeedsRiderCount(sellerUsername) {
+    try {
+        const snap = await getDocs(query(
+            collection(db, "orders"),
+            where("sellerUsername", "==", sellerUsername),
+            where("status", "==", "to-ship")
+        ));
+        let count = 0;
+        snap.forEach(d => {
+            const o = d.data();
+            if (!o.assignedRiderUID && !o.requestedRiderUID) count++;
+        });
+        return count;
+    } catch (e) {
+        console.warn("Could not load needs-rider count:", e);
+        return 0;
+    }
+}
+
+function updateNotifBadge(count) {
+    const badge = document.getElementById("notifBadge");
+    if (count > 0) {
+        badge.textContent = count > 99 ? "99+" : count;
+        badge.style.display = "flex";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+function updateMsgBadge(count) {
+    const badge = document.getElementById("msgBadge");
+    if (count > 0) {
+        badge.textContent = count > 99 ? "99+" : count;
+        badge.style.display = "flex";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+function updateApprovalBadge(count) {
+    const badge = document.getElementById("approvalBadge");
+    if (count > 0) {
+        badge.textContent = count > 99 ? "99+" : count;
+        badge.style.display = "flex";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+function updateRiderBadge(count) {
+    const badge = document.getElementById("riderBadge");
+    if (count > 0) {
+        badge.textContent = count > 99 ? "99+" : count;
+        badge.style.display = "flex";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+async function loadBadges(sellerUsername) {
+    try {
+        const [unread, pending, unreadRatings, needsRider] = await Promise.all([
+            getUnreadCountForSeller(sellerUsername),
+            getPendingOrderCountForSeller(sellerUsername),
+            getUnreadRatingCount(sellerUsername),
+            getNeedsRiderCount(sellerUsername)
+        ]);
+        updateMsgBadge(unread);
+        updateApprovalBadge(pending);
+        updateNotifBadge(unreadRatings);
+        updateRiderBadge(needsRider);
+    } catch (e) {
+        console.warn("Could not load badge counts:", e);
+    }
+}
+
+function applySellerData(data, username) {
+    const pic = data?.profilePic || "";
+    const placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23555'/%3E%3C/svg%3E";
+    document.getElementById("sellerPic").src    = pic || placeholder;
+    document.getElementById("sellerPicBig").src = pic || placeholder;
+    document.getElementById("welcomeName").innerText = "WELCOME, " + username.toUpperCase() + "!!";
+}
+
+let isLoggingOut = false;
+let currentSellerUsername = null;
+
+onAuthStateChanged(auth, async (user) => {
+    if (isLoggingOut) return;
+    if (!user) {
+        const saved = localStorage.getItem("currentSeller");
+        if (!saved) { window.location.href = "seller login.html"; return; }
+        currentSellerUsername = saved;
+        applySellerData({}, saved);
+        loadBadges(saved);
+        setInterval(() => loadBadges(saved), 5000);
+        return;
+    }
+
+    try {
+        const snap = await getDoc(doc(db, "sellers", user.uid));
+        if (snap.exists()) {
+            const data = snap.data();
+            localStorage.setItem("currentSeller", data.username);
+            localStorage.setItem("currentSellerUID", user.uid);
+            localStorage.setItem("currentSellerPic", data.profilePic || "");
+            currentSellerUsername = data.username;
+            applySellerData(data, data.username);
+            loadBadges(data.username);
+            setInterval(() => loadBadges(data.username), 5000);
+        } else {
+            alert("Please login first.");
+            window.location.href = "seller login.html";
+        }
+    } catch(e) {
+        const saved = localStorage.getItem("currentSeller");
+        if (!saved) { window.location.href = "seller login.html"; return; }
+        currentSellerUsername = saved;
+        applySellerData({}, saved);
+        loadBadges(saved);
+        setInterval(() => loadBadges(saved), 5000);
+    }
+});
+
+window.logout = function() {
+    isLoggingOut = true;
+    localStorage.removeItem("currentSeller");
+    localStorage.removeItem("currentSellerUID");
+    localStorage.removeItem("currentSellerPic");
+    signOut(auth).finally(() => { window.location.href = "login.html"; });
+};
+
+window.goToApproval = function() { window.location.href = "approval-of-order.html"; };
+window.goToRequestRider = function() { window.location.href = "request-rider.html"; };
+</script>
+</body>
+</html>

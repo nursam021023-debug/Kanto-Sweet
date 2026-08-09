@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To Receive</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f4ff;
+            color: #2d2d2d;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+ 
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+            padding: 20px 20px 28px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; right: 0;
+            height: 20px;
+            background: #f0f4ff;
+            border-radius: 20px 20px 0 0;
+        }
+ 
+        .header-top {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 16px;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.12);
+            border: none; border-radius: 10px;
+            color: #fff; width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 18px;
+            transition: background .15s;
+            flex-shrink: 0;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.22); }
+ 
+        .header-title-wrap { flex: 1; }
+        .header-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.5); text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .header-title {
+            font-size: 20px; font-weight: 800; color: #fff;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .header-title .icon { font-size: 22px; }
+ 
+        .header-count {
+            background: rgba(255,255,255,0.15);
+            border: 1.5px solid rgba(255,255,255,0.25);
+            color: #fff; border-radius: 20px;
+            padding: 4px 14px; font-size: 12px; font-weight: 700;
+            white-space: nowrap;
+        }
+ 
+        .search-wrap {
+            margin: 0 20px 14px;
+            display: flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px solid #dde3ef;
+            border-radius: 12px; padding: 10px 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        }
+        .search-wrap svg { color: #aaa; flex-shrink: 0; }
+        .search-wrap input {
+            border: none; outline: none; flex: 1;
+            font-size: 14px; background: transparent; color: #333;
+        }
+ 
+        .notice-banner {
+            margin: 0 20px 14px;
+            background: linear-gradient(135deg, #cce5ff, #e8f4ff);
+            border: 1.5px solid #9ecfff;
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex; align-items: flex-start; gap: 10px;
+        }
+        .notice-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+        .notice-text { font-size: 14.5px; color: #004085; line-height: 1.6; }
+        .notice-text strong { display: block; margin-bottom: 3px; font-size: 16px; }
+ 
+        .order-list {
+            padding: 0 20px;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+ 
+        .empty-state {
+            text-align: center; padding: 60px 20px;
+        }
+        .empty-icon { font-size: 52px; margin-bottom: 12px; }
+        .empty-title { font-size: 17px; font-weight: 700; color: #5a6a8a; margin-bottom: 6px; }
+        .empty-sub { font-size: 13px; color: #aaa; }
+
+        .loading-state {
+            text-align: center; padding: 60px 20px;
+            color: #888; font-size: 14px;
+        }
+ 
+        .order-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #dde6ff;
+            box-shadow: 0 3px 12px rgba(26,26,46,.07);
+            overflow: hidden;
+            animation: fadeUp .25s ease both;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+ 
+        .card-top {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px 8px;
+            border-bottom: 1px solid #f0f3fb;
+            background: #fafbff;
+        }
+        .card-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+ 
+        .type-badge {
+            font-size: 11px; font-weight: 700; padding: 3px 10px;
+            border-radius: 20px; letter-spacing: .3px;
+        }
+        .badge-order   { background: #e8f0fe; color: #3a5fcf; }
+        .badge-reserve { background: #fff3e0; color: #b05e00; }
+ 
+        .status-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: #cce5ff; color: #004085;
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+        }
+        .status-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #004085; animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: .5; transform: scale(.7); }
+        }
+ 
+        .card-date { font-size: 11px; color: #bbb; white-space: nowrap; }
+ 
+        .card-body {
+            display: flex; gap: 12px; padding: 14px 16px 12px;
+        }
+        .item-img {
+            width: 72px; height: 72px; border-radius: 12px;
+            object-fit: cover; border: 1px solid #eee;
+            background: #f4f4f4; flex-shrink: 0;
+        }
+        .item-info { flex: 1; min-width: 0; }
+        .item-name {
+            font-size: 15px; font-weight: 700; color: #1a1a2e;
+            margin-bottom: 5px; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        .item-detail { font-size: 12px; color: #777; margin-top: 3px; }
+        .item-price { color: #1a7a4a; font-weight: 700; }
+ 
+        .seller-row {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 12px; color: #888; margin-top: 5px;
+        }
+ 
+        .tracking-row {
+            margin: 0 16px 14px;
+            background: #f0f7ff;
+            border: 1.5px dashed #9ecfff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .tracking-icon { font-size: 20px; flex-shrink: 0; }
+        .tracking-info { flex: 1; }
+        .tracking-label { font-size: 11px; font-weight: 700; color: #004085; margin-bottom: 2px; }
+        .tracking-sub   { font-size: 11px; color: #6a90b8; }
+
+        /* ── Live GPS tracking box ─────────────────────────────────────── */
+        .live-track-box {
+            margin: 0 16px 14px;
+            background: #f0f7ff;
+            border: 1.5px solid #9ecfff;
+            border-radius: 12px;
+            padding: 10px 10px 12px;
+        }
+        .live-track-header {
+            display: flex; align-items: center; gap: 7px;
+            padding: 2px 4px 8px;
+            font-size: 12px; font-weight: 700; color: #004085;
+        }
+        .live-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #1a9c5a; flex-shrink: 0;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+        .live-track-name { flex: 1; }
+        .live-updated {
+            font-size: 10.5px; font-weight: 600; color: #6a90b8;
+            white-space: nowrap;
+        }
+        .live-map {
+            width: 100%; height: 150px; border-radius: 10px;
+            overflow: hidden; background: #dfe8fb;
+        }
+        .live-map .leaflet-control-attribution { display: none; }
+        .btn-open-maps {
+            width: 100%; margin-top: 8px; padding: 9px 12px;
+            border-radius: 9px; border: 1.5px solid #9ecfff;
+            background: #fff; color: #004085;
+            font-size: 12.5px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: background .15s;
+        }
+        .btn-open-maps:hover { background: #e6f1ff; }
+
+        /* ── Rider contact card ─────────────────────────────────────────── */
+        .rider-contact-box {
+            margin: 0 16px 14px;
+            background: #f0fbf6;
+            border: 1.5px solid #a6e6c8;
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .rider-contact-info { flex: 1; min-width: 0; }
+        .rider-contact-name {
+            font-size: 16px; font-weight: 800; color: #0a5940;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .rider-contact-sub { font-size: 13.5px; color: #4a8a70; font-weight: 600; margin-top: 3px; }
+        .rider-contact-vehicle {
+            font-size: 12.5px; color: #4a8a70; font-weight: 600; margin-top: 3px;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .rider-contact-badge {
+            font-size: 11px; font-weight: 700; color: #1a9c5a;
+            background: #e6f7ef; border: 1px solid #a6e6c8;
+            border-radius: 8px; padding: 5px 10px; flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        /* ── COD notice, shown under the rider's phone number ──────────── */
+        .rider-contact-cod {
+            font-size: 13.5px; color: #010a02; font-weight: 700;
+            margin-top: 6px; line-height: 1.5;
+        }
+ 
+        .card-actions {
+            border-top: 1px solid #f0f3fb;
+            padding: 10px 16px 12px;
+            display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .btn-contact {
+            flex: 1; min-width: 140px;
+            padding: 10px 16px; border-radius: 10px;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer;
+            background: #f0f4ff;
+            border: 1.5px solid #c0ccee;
+            color: #3a5fcf;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: background .15s;
+        }
+        .btn-contact:hover { background: #e0e8ff; }
+        .btn-contact:disabled { opacity: .6; cursor: default; }
+ 
+        .toast {
+            position: fixed; bottom: 28px; left: 50%;
+            transform: translateX(-50%) translateY(60px);
+            background: #1a1a2e; color: #fff;
+            padding: 12px 24px; border-radius: 30px;
+            font-size: 13px; font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2);
+            transition: transform .3s ease, opacity .3s ease;
+            opacity: 0; z-index: 999; white-space: nowrap;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+ 
+    <div class="header">
+        <div class="header-top">
+            <button class="back-btn" onclick="goBack()">&#8592;</button>
+            <div class="header-title-wrap">
+                <div class="header-label">My Orders</div>
+                <div class="header-title">
+                    <span class="icon">🚚</span> To Receive
+                </div>
+            </div>
+            <span class="header-count" id="orderCount">0 orders</span>
+        </div>
+    </div>
+ 
+    <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" placeholder="Search item or seller..." oninput="renderOrders()">
+    </div>
+ 
+    <div class="order-list" id="orderList">
+        <div class="loading-state">Loading orders...</div>
+    </div>
+ 
+    <div class="toast" id="toast"></div>
+ 
+<script type="module">
+import { getOrdersByCustomer, getAllStores, subscribeToRiderLocation, getRiderById } from "./db.js";
+
+const currentCustomer    = localStorage.getItem("currentCustomer");
+const currentUID         = localStorage.getItem("currentCustomerUID") || "";
+
+if (!currentCustomer) {
+    alert("Please login first.");
+    window.location.href = "login.html";
+    throw new Error("stop");
+}
+
+// ── Cache ──────────────────────────────────────────────────────────────────
+let _toReceiveOrders = [];   // flat list of orders with status === "to-receive"
+let _storeCache      = null;
+// FIX: dating "sticky" cache ito habang bukas ang tab (_riderProfileCache),
+// kaya kahit na-update ng rider ang phone/vehicle sa profile-rider.html,
+// hindi na ito nagre-refresh dito hangga't hindi ni-reload ang buong page.
+// Ang loadOrders() ay tumatakbo na paulit-ulit bawat 5s (setInterval), kaya
+// hindi na kailangan ng persistent na cache — sa bawat refresh cycle,
+// dapat sariwa ang laman ng rider profile.
+//
+// FIX 2 (bago): ang cache key ngayon ay riderUID (assignedRiderUID), HINDI
+// na ang username (assignedRider). Dati, kung may 2+ riders docs na
+// pareho ang "username" field, o kung nag-edit ang rider ng sarili
+// niyang username pagkatapos ma-assign sa order, ang query-by-username na
+// getDeliveryByUsername() ay pwedeng tumama sa MALING document o wala
+// nang mahanap. Ang riderUID naman ay hindi kailanman nagbabago at
+// palaging tumuturo sa eksaktong doc na ginagamit din ng live GPS
+// tracking sa itaas, kaya walang duplicate/mismatch na posible.
+let _riderProfileCache = {}; // riderUID -> rider doc, ni-reset sa simula ng BAWAT loadOrders()
+
+// ── Live GPS tracking state ─────────────────────────────────────────────────
+// riderUnsubs:     riderUID -> unsubscribe function for the Firestore listener
+// riderLocations:  riderUID -> { lat, lng, updatedAt }
+// riderMapInstances: orderId -> { map, marker }  (Leaflet instances, one per card)
+const riderUnsubs       = {};
+const riderLocations    = {};
+const riderMapInstances = {};
+
+function ensureRiderSubscription(riderUID) {
+    if (!riderUID || riderUnsubs[riderUID]) return;
+    riderUnsubs[riderUID] = subscribeToRiderLocation(riderUID, (loc) => {
+        riderLocations[riderUID] = loc;
+        updateMapsForRider(riderUID);
+    });
+}
+
+// Keep only the rider subscriptions that current "to-receive" orders still need
+function syncRiderSubscriptions() {
+    const activeRiderUIDs = new Set(
+        _toReceiveOrders.filter(o => o.assignedRiderUID).map(o => o.assignedRiderUID)
+    );
+    activeRiderUIDs.forEach(uid => ensureRiderSubscription(uid));
+    Object.keys(riderUnsubs).forEach(uid => {
+        if (!activeRiderUIDs.has(uid)) {
+            riderUnsubs[uid]();
+            delete riderUnsubs[uid];
+            delete riderLocations[uid];
+        }
+    });
+}
+
+function destroyAllMaps() {
+    Object.values(riderMapInstances).forEach(inst => {
+        try { inst.map.remove(); } catch (e) {}
+    });
+    for (const key in riderMapInstances) delete riderMapInstances[key];
+}
+
+function initMapForOrder(order) {
+    const el = document.getElementById(`map-${order.id}`);
+    if (!el || typeof L === "undefined") return;
+
+    const loc = riderLocations[order.assignedRiderUID];
+    const startLat = loc ? loc.lat : 14.5995; // fallback: Metro Manila center
+    const startLng = loc ? loc.lng : 120.9842;
+
+    const map = L.map(el, { zoomControl: false, attributionControl: false, dragging: true, scrollWheelZoom: false })
+        .setView([startLat, startLng], loc ? 16 : 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    const marker = L.marker([startLat, startLng]).addTo(map);
+
+    riderMapInstances[order.id] = { map, marker };
+    updateTrackTextForOrder(order);
+}
+
+function updateMapsForRider(riderUID) {
+    _toReceiveOrders
+        .filter(o => o.assignedRiderUID === riderUID)
+        .forEach(o => {
+            const inst = riderMapInstances[o.id];
+            const loc  = riderLocations[riderUID];
+            if (inst && loc) {
+                inst.marker.setLatLng([loc.lat, loc.lng]);
+                inst.map.setView([loc.lat, loc.lng]);
+            }
+            updateTrackTextForOrder(o);
+        });
+}
+
+function updateTrackTextForOrder(order) {
+    const el = document.getElementById(`updated-${order.id}`);
+    if (!el) return;
+    const loc = riderLocations[order.assignedRiderUID];
+    if (!loc || !loc.updatedAt) {
+        el.textContent = "Waiting for GPS…";
+        return;
+    }
+    const secs = loc.updatedAt.seconds
+        ? Math.max(0, Math.floor(Date.now() / 1000 - loc.updatedAt.seconds))
+        : null;
+    el.textContent = secs != null ? `Updated ${secs}s ago` : "Live";
+}
+
+window.openRiderInMaps = function (orderId) {
+    const order = _toReceiveOrders.find(o => o.id === orderId);
+    if (!order || !order.assignedRiderUID) {
+        showToast("⚠️ No rider assigned yet.");
+        return;
+    }
+    const loc = riderLocations[order.assignedRiderUID];
+    if (!loc) {
+        showToast("⚠️ Rider location not available yet.");
+        return;
+    }
+    window.open(`https://www.google.com/maps?q=${loc.lat},${loc.lng}`, "_blank");
+};
+
+// Refresh "Updated Xs ago" labels every second without needing a full re-render
+setInterval(() => {
+    _toReceiveOrders.forEach(o => { if (o.assignedRiderUID) updateTrackTextForOrder(o); });
+}, 1000);
+
+// ── Store name helper ──────────────────────────────────────────────────────
+async function getStoreName(sellerUsername) {
+    if (!_storeCache) {
+        try { _storeCache = await getAllStores(); }
+        catch(e) { _storeCache = []; }
+    }
+    const store = _storeCache.find(s => s.seller === sellerUsername);
+    return store ? store.name : sellerUsername;
+}
+
+// ── Rider profile/contact helper ────────────────────────────────────────────
+// FIX: dating hinahanap ito sa pamamagitan ng riderUsername (query-by-name
+// via getDeliveryByUsername), na may dalawang problema:
+//   1) kung may duplicate na "username" sa riders collection, posibleng
+//      ibang document ang matama (yung una lang na resulta ng query).
+//   2) kung nag-edit ng username ang rider matapos ma-assign sa order,
+//      wala nang mahanap dahil naka-save na ang LUMANG username sa order.
+// Ngayon, gamit na ang riderUID (order.assignedRiderUID) — parehong UID
+// na ginagamit na rin ng live GPS tracking — kaya walang epekto ang
+// alinman sa dalawang isyu sa itaas: direktang lookup ito sa eksaktong
+// document, hindi query by field.
+async function getRiderProfile(riderUID) {
+    if (!riderUID) return null;
+    if (_riderProfileCache[riderUID] !== undefined) return _riderProfileCache[riderUID];
+    try {
+        const rider = await getRiderById(riderUID);
+        _riderProfileCache[riderUID] = rider;
+        return rider;
+    } catch (e) {
+        _riderProfileCache[riderUID] = null;
+        return null;
+    }
+}
+
+// ── Load from Firestore ────────────────────────────────────────────────────
+async function loadOrders() {
+    try {
+        const all = await getOrdersByCustomer(currentUID);
+        // FIX: filter only "to-receive" status from Firestore
+        _toReceiveOrders = all.filter(o => o.status === "to-receive");
+    } catch(e) {
+        console.error("Failed to load orders:", e);
+        _toReceiveOrders = [];
+    }
+    // FIX: i-reset ang rider profile cache bago mag-render, para hindi na
+    // "sticky" ang laman ng phone/vehicle sa buong buhay ng tab — laging
+    // sariwa mula Firestore sa bawat 5s refresh cycle.
+    _riderProfileCache = {};
+    syncRiderSubscriptions();
+    renderOrders();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+async function renderOrders() {
+    const query = document.getElementById("searchInput").value.trim().toLowerCase();
+    const list  = document.getElementById("orderList");
+    const countEl = document.getElementById("orderCount");
+
+    // Update count badge with TOTAL (unfiltered)
+    const total = _toReceiveOrders.length;
+    countEl.innerText = total + (total === 1 ? " order" : " orders");
+
+    // Apply search filter
+    let orders = _toReceiveOrders;
+    if (query) {
+        orders = orders.filter(o =>
+            (o.name   && o.name.toLowerCase().includes(query)) ||
+            (o.sellerUsername && o.sellerUsername.toLowerCase().includes(query)) ||
+            (o.seller && o.seller.toLowerCase().includes(query))
+        );
+    }
+
+    // Tear down existing Leaflet maps before rebuilding the list —
+    // their containers are about to be wiped by innerHTML = "".
+    destroyAllMaps();
+    list.innerHTML = "";
+
+    if (orders.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🚚</div>
+                <div class="empty-title">No orders to receive yet</div>
+                <div class="empty-sub">When a seller ships your order, it will appear here.</div>
+            </div>`;
+        return;
+    }
+
+    for (let i = 0; i < orders.length; i++) {
+        const order = orders[i];
+        const card  = document.createElement("div");
+        card.className = "order-card";
+        card.style.animationDelay = (i * 0.06) + "s";
+
+        const isReserve  = order.type === "reservation";
+        const rawDate    = order.createdAt?.seconds
+            ? new Date(order.createdAt.seconds * 1000)
+            : order.createdAt ? new Date(order.createdAt) : null;
+        const displayDate = rawDate
+            ? rawDate.toLocaleDateString("en-PH", { year:"numeric", month:"short", day:"numeric" })
+            : "—";
+        const totalPrice = (parseFloat(order.price || 0) * (order.qty || 1)).toFixed(0);
+
+        // seller display name — use sellerUsername field (from db.js placeOrder)
+        const sellerKey  = order.sellerUsername || order.seller || "";
+        const storeName  = await getStoreName(sellerKey);
+
+        const hasRider = !!order.assignedRiderUID;
+        const isCOD    = (order.paymentMethod || "").toLowerCase() === "cod";
+        // FIX: lookup na ngayon by UID (order.assignedRiderUID), hindi na
+        // by username (order.assignedRider) — see getRiderProfile() above.
+        const riderProfile = hasRider ? await getRiderProfile(order.assignedRiderUID) : null;
+        const riderPhone   = riderProfile?.phone || riderProfile?.contactNumber || "";
+        const riderVehicle = riderProfile?.vehicle || "";
+        // Display name: prefer the LIVE username from the rider's own doc
+        // (riderProfile.username) over the possibly-stale order.assignedRider
+        // snapshot, so a rider renaming themselves shows up correctly too.
+        const riderDisplayName = riderProfile?.username || order.assignedRider || "Rider";
+
+        card.innerHTML = `
+            <div class="card-top">
+                <div class="card-meta">
+                    <span class="type-badge ${isReserve ? 'badge-reserve' : 'badge-order'}">
+                        ${isReserve ? '📅 Reservation' : '🛒 Order'}
+                    </span>
+                    <span class="status-pill">
+                        <span class="status-dot"></span>
+                        To Receive
+                    </span>
+                </div>
+                <span class="card-date">${displayDate}</span>
+            </div>
+
+            <div class="card-body">
+                <img class="item-img" src="${order.image || ''}" alt="${order.name || ''}">
+                <div class="item-info">
+                    <div class="item-name">${order.name || '—'}</div>
+                    <div class="item-detail">
+                        Size: <strong>${order.size || '—'}</strong> &nbsp;|&nbsp;
+                        Qty: <strong>${order.qty || 1}</strong>
+                    </div>
+                    <div class="item-detail">
+                        Total: <span class="item-price">₱${totalPrice}</span>
+                    </div>
+                    ${order.referenceNum ? `<div class="item-detail">Ref #: <strong>${order.referenceNum}</strong></div>` : ''}
+                    <div class="seller-row">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                        ${storeName}
+                    </div>
+                </div>
+            </div>
+
+            ${hasRider ? `
+            <div class="live-track-box">
+                <div class="live-track-header">
+                    <span class="live-dot"></span>
+                    <span class="live-track-name">Live tracking — ${riderDisplayName}</span>
+                    <span class="live-updated" id="updated-${order.id}">connecting…</span>
+                </div>
+                <div class="live-map" id="map-${order.id}"></div>
+                <button class="btn-open-maps" onclick="openRiderInMaps('${order.id}')">
+                    🧭 Open in Google Maps
+                </button>
+            </div>
+
+            <div class="rider-contact-box">
+                <div class="rider-contact-info">
+                    <div class="rider-contact-name">${riderDisplayName}</div>
+                    <div class="rider-contact-sub">📞 ${riderPhone ? riderPhone : 'No contact number on file'}</div>
+                    <div class="rider-contact-vehicle">🏍️ ${riderVehicle ? riderVehicle : 'No vehicle info on file'}</div>
+                    ${isCOD ? `<div class="rider-contact-cod">Your order is on the way, please prepare the exact amount.</div>` : ''}
+                </div>
+            </div>
+            ` : `
+            <div class="tracking-row">
+                <div class="tracking-icon">📍</div>
+                <div class="tracking-info">
+                    <div class="tracking-label">Your order is on the way</div>
+                    <div class="tracking-sub">${isCOD ? 'Please prepare the exact amount.' : 'Seller has prepared and shipped your item'}</div>
+                </div>
+            </div>
+            `}
+
+            <div class="card-actions">
+                <button class="btn-contact" ${hasRider ? `onclick="contactRider('${escAttr(order.id)}', '${escAttr(riderDisplayName)}', this)"` : 'disabled'}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    ${hasRider ? 'Contact Rider' : 'Waiting for rider'}
+                </button>
+            </div>
+        `;
+        list.appendChild(card);
+
+        if (hasRider) initMapForOrder(order);
+    }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function escAttr(val) {
+    return (val || "").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// ── Contact Rider: open the chat thread for this order ──────────────────────
+// The chats/{orderId} document is created automatically the moment the rider
+// accepted this delivery (see acceptRiderRequest() + getOrCreateChatForOrder()
+// in db.js), so we don't need to look anything up here — the orderId IS the
+// chatId. We just navigate straight to R&C-chat.html with it.
+window.contactRider = function (orderId, riderName, btnEl) {
+    if (!orderId) {
+        showToast("⚠️ Rider info unavailable.");
+        return;
+    }
+    if (btnEl) btnEl.disabled = true;
+    showToast("Opening chat with " + (riderName || "your rider") + "...");
+    window.location.href = `R&C-chat.html?chat=${encodeURIComponent(orderId)}`;
+};
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.innerText = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2800);
+}
+
+// ── Auto-refresh every 5s (picks up seller status changes) ───────────────
+setInterval(loadOrders, 5000);
+
+window.goBack = function() { window.location.href = "customer-profile.html"; };
+
+// ── Init ───────────────────────────────────────────────────────────────────
+window.renderOrders = renderOrders;   // expose for search input oninput
+loadOrders();
+</script>
+</body>
+</html>

@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f4ff;
+            color: #2d2d2d;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+        .header {
+            background: linear-gradient(135deg, #0c5460 0%, #0a4a56 60%, #083d47 100%);
+            padding: 20px 20px 24px;
+            position: relative; overflow: hidden;
+        }
+        .header::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+            height: 20px; background: #f0f4ff; border-radius: 20px 20px 0 0;
+        }
+        .header-top { display: flex; align-items: center; justify-content: space-between; }
+        .header-title { font-size: 20px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .header-sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+        .header-contact-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+        .header-contact { font-size: 11.5px; color: rgba(255,255,255,0.5); }
+        .edit-contact-btn {
+            background: rgba(255,255,255,0.14); border: none; border-radius: 6px;
+            color: #fff; font-size: 10.5px; padding: 2px 7px; cursor: pointer;
+        }
+        .edit-contact-btn:hover { background: rgba(255,255,255,0.26); }
+        .logout-btn {
+            background: rgba(255,255,255,0.12); border: none; border-radius: 8px;
+            color: #fff; font-size: 12px; padding: 7px 12px; cursor: pointer;
+        }
+        .logout-btn:hover { background: rgba(255,255,255,0.22); }
+
+        .availability-strip {
+            margin: 0 20px 14px; background: #fff; border-radius: 14px;
+            padding: 12px 16px; border: 1px solid #dde3ef;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        }
+        .availability-strip .label { font-size: 13px; font-weight: 700; color: #333; }
+        .availability-strip .sub { font-size: 11.5px; color: #888; margin-top: 1px; }
+        .avail-switch {
+            position: relative; width: 46px; height: 26px; flex-shrink: 0;
+            background: #ccc; border-radius: 999px; border: none; cursor: pointer;
+            transition: background .2s ease;
+        }
+        .avail-switch.on { background: #2ec4a6; }
+        .avail-switch::after {
+            content: ''; position: absolute; top: 3px; left: 3px;
+            width: 20px; height: 20px; background: #fff; border-radius: 50%;
+            transition: transform .2s ease; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+        }
+        .avail-switch.on::after { transform: translateX(20px); }
+
+        .count-strip {
+            margin: 0 20px 14px; background: #fff; border-radius: 14px;
+            padding: 12px 16px; border: 1px solid #dde3ef;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            font-size: 13px; color: #5a6a8a; font-weight: 600;
+        }
+        .count-strip strong { color: #0c5460; }
+
+        .section-label {
+            margin: 22px 20px 10px; font-size: 13px; font-weight: 800;
+            color: #5a6a8a; text-transform: uppercase; letter-spacing: .5px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .req-count-pill {
+            background: #e74c3c; color: #fff; font-size: 11px; font-weight: 800;
+            border-radius: 999px; padding: 1px 8px;
+        }
+
+        .order-list { padding: 0 20px; display: flex; flex-direction: column; gap: 14px; }
+        .empty { color: #aaa; text-align: center; padding: 40px 0; font-size: 14px; }
+        .loading { color: #888; text-align: center; padding: 40px 0; font-size: 14px; }
+
+        .order-card {
+            background: #fff; border-radius: 14px; border: 1px solid #e4e9f4;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06); overflow: hidden;
+        }
+        .order-card.request-card { border: 1.5px solid #f2c14e; }
+        .order-body { display: flex; gap: 12px; padding: 14px 16px 10px; }
+        .order-img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; border: 1px solid #eee; background: #f4f4f4; flex-shrink: 0; }
+        .order-info { flex: 1; min-width: 0; }
+        .order-name { font-size: 14.5px; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; }
+        .order-detail { font-size: 12px; color: #666; margin-top: 2px; }
+        .order-detail strong { color: #333; }
+        .order-addr {
+            display: flex; align-items: flex-start; gap: 4px;
+        }
+        .no-addr { color: #b98a00; font-style: italic; }
+        .pickup-row {
+            display: flex; align-items: flex-start; gap: 4px;
+            font-size: 12px; color: #0a5940; margin-top: 4px;
+        }
+        .pickup-row .pickup-label {
+            font-weight: 700; color: #0a5940;
+        }
+        .no-pickup { color: #b98a00; font-style: italic; }
+        .fee-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #eef6ff; color: #1a5fa8; font-size: 11px; font-weight: 700;
+            border: 1px solid #cfe3fb; border-radius: 999px; padding: 2px 9px;
+            margin-top: 6px;
+        }
+        .fee-pill.estimate { background: #fff6e6; color: #a56c00; border-color: #f2dcae; }
+
+        .card-actions { padding: 10px 16px 14px; display: flex; gap: 8px; }
+        .btn-deliver, .btn-directions {
+            flex: 1; padding: 10px; border: none; border-radius: 10px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+        }
+        .btn-deliver { background: #0c5460; color: #fff; }
+        .btn-deliver:hover { background: #083d47; }
+        .btn-directions {
+            background: #fff; color: #0c5460; border: 1.5px solid #0c5460;
+        }
+        .btn-directions:hover { background: #e6f1f2; }
+        .btn-directions:disabled {
+            opacity: .45; cursor: not-allowed; border-color: #ccc; color: #999;
+        }
+        .btn-pickup-directions {
+            background: #fff; color: #0a5940; border: 1.5px solid #0a5940;
+        }
+        .btn-pickup-directions:hover { background: #e6f7f0; }
+        .btn-pickup-directions:disabled {
+            opacity: .45; cursor: not-allowed; border-color: #ccc; color: #999;
+        }
+
+        .btn-accept, .btn-decline {
+            flex: 1; padding: 10px; border: none; border-radius: 10px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+        }
+        .btn-accept { background: #2ec4a6; color: #fff; }
+        .btn-accept:hover { background: #26a88d; }
+        .btn-decline { background: #fff; color: #c0392b; border: 1.5px solid #c0392b; }
+        .btn-decline:hover { background: #fdeaea; }
+
+        .proof-tag {
+            margin: 0 16px 14px; padding: 8px 12px; border-radius: 8px;
+            background: #e6f7f0; color: #0a5940; font-size: 12px; font-weight: 600;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+            align-items: center; justify-content: center; z-index: 999; padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: #fff; border-radius: 16px; padding: 22px; width: 100%; max-width: 360px;
+        }
+        .modal-box h3 { font-size: 16px; margin-bottom: 4px; }
+        .modal-box .sub { font-size: 12px; color: #888; margin-bottom: 14px; }
+        .upload-zone {
+            border: 2px dashed #cfd8ea; border-radius: 12px; padding: 18px;
+            text-align: center; cursor: pointer; margin-bottom: 14px; position: relative;
+        }
+        .upload-zone img { max-width: 100%; max-height: 160px; border-radius: 8px; display: none; margin: 0 auto; }
+        .upload-zone .hint { font-size: 12.5px; color: #999; }
+        .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .modal-actions { display: flex; gap: 8px; }
+        .modal-actions button {
+            flex: 1; padding: 10px; border-radius: 10px; border: none;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+        }
+        .btn-cancel { background: #f0f2f8; color: #555; }
+        .btn-confirm { background: #0c5460; color: #fff; }
+        .btn-confirm:disabled { opacity: .5; cursor: not-allowed; }
+
+        .field-group { margin-bottom: 12px; }
+        .field-group label {
+            display: block; font-size: 12px; font-weight: 700; color: #555; margin-bottom: 5px;
+        }
+        .field-group input {
+            width: 100%; padding: 10px 12px; border: 1.5px solid #dde3ef; border-radius: 10px;
+            font-size: 13.5px; font-family: inherit; color: #2d2d2d;
+        }
+        .field-group input:focus { outline: none; border-color: #0c5460; }
+        .field-error { font-size: 11.5px; color: #c0392b; margin-top: 4px; display: none; }
+
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+            background: #1a1a2e; color: #fff; padding: 10px 18px; border-radius: 10px;
+            font-size: 13px; opacity: 0; pointer-events: none; transition: all .25s; z-index: 1000;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-top">
+        <div>
+            <div class="header-title">🚚 Rider dashboard</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button class="logout-btn" onclick="window.location.href='rider-home.html'">Home</button>
+        </div>
+    </div>
+</div>
+
+<div class="availability-strip">
+    <div>
+        <div class="label" id="availLabel">Available for deliveries</div>
+        <div class="sub" id="availSub">Sellers can send you delivery requests</div>
+    </div>
+    <button class="avail-switch on" id="availSwitch" onclick="toggleAvailability()"></button>
+</div>
+
+<div class="count-strip">Orders ready for delivery: <strong id="orderCount">0</strong></div>
+<div class="count-strip" id="gpsStrip">📍 Live location: <strong id="gpsStatus">Waiting for GPS permission…</strong></div>
+
+<div class="section-label">
+    Delivery requests
+    <span class="req-count-pill" id="reqCountPill" style="display:none;">0</span>
+</div>
+<div class="order-list" id="requestList">
+    <div class="loading">Loading requests...</div>
+</div>
+
+<div class="section-label">Ready for delivery</div>
+<div class="order-list" id="orderList">
+    <div class="loading">Loading orders...</div>
+</div>
+
+<div class="modal-overlay" id="proofModal">
+    <div class="modal-box">
+        <h3>Confirm delivery</h3>
+        <div class="sub" id="modalOrderName">—</div>
+        <label class="upload-zone" id="uploadZone">
+            <img id="proofPreview" alt="Proof preview">
+            <div class="hint" id="uploadHint">📷 Tap to take/upload a photo of the delivered item</div>
+            <input type="file" id="proofInput" accept="image/*" capture="environment">
+        </label>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeProofModal()">Cancel</button>
+            <button class="btn-confirm" id="confirmProofBtn" disabled onclick="confirmProof()">Submit proof</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+    getToReceiveOrdersForDelivery,
+    submitDeliveryProof,
+    assignRiderToOrder,
+    updateRiderLocation,
+    getPendingRiderRequests,
+    acceptRiderRequest,
+    declineRiderRequest,
+    getRiderAvailability,
+    setRiderAvailability,
+    getDeliveryByUsername,
+    updateRiderProfile
+} from "./db.js";
+
+const currentRider    = localStorage.getItem("currentRider");
+const currentRiderUID = localStorage.getItem("currentRiderUID") || "";
+
+if (!currentRider) {
+    alert("Please login first.");
+    window.location.href = "login.html";
+    throw new Error("stop");
+}
+
+let _orders = [];
+let _requests = [];
+let isAvailable = true;
+let pendingOrderId = null;
+let pendingPhotoDataUrl = null;
+let riderProfile = null;
+
+async function loadRiderContact() {
+    try {
+        riderProfile = await getDeliveryByUsername(currentRider);
+    } catch (e) {
+        console.warn("Could not load rider contact info:", e);
+    }
+}
+
+async function loadAvailability() {
+    try {
+        isAvailable = await getRiderAvailability(currentRiderUID);
+        if (isAvailable == null) isAvailable = true;
+    } catch (e) {
+        console.warn("Could not load availability, defaulting to available:", e);
+        isAvailable = true;
+    }
+    renderAvailability();
+}
+
+function renderAvailability() {
+    const sw = document.getElementById("availSwitch");
+    const label = document.getElementById("availLabel");
+    const sub = document.getElementById("availSub");
+    if (isAvailable) {
+        sw.classList.add("on");
+        label.textContent = "Available for deliveries";
+        sub.textContent = "Sellers can send you delivery requests";
+    } else {
+        sw.classList.remove("on");
+        label.textContent = "Unavailable";
+        sub.textContent = "You won't receive new delivery requests";
+    }
+}
+
+window.toggleAvailability = async function () {
+    const next = !isAvailable;
+    isAvailable = next;
+    renderAvailability();
+    try {
+        await setRiderAvailability(currentRiderUID, next);
+        showToast(next ? "🟢 You're now available for deliveries" : "🔴 You're now marked unavailable");
+    } catch (e) {
+        console.error(e);
+        isAvailable = !next;
+        renderAvailability();
+        showToast("❌ Couldn't update availability. Try again.");
+    }
+};
+
+async function loadRequests() {
+    try {
+        _requests = await getPendingRiderRequests(currentRiderUID);
+    } catch (e) {
+        console.error("Failed to load delivery requests:", e);
+        _requests = [];
+    }
+    renderRequests();
+    resolvePickupPlaceNames();
+}
+
+// Builds a readable one-line address string from an order's address object.
+// Declared once here so both renderRequests() and renderOrders() can use it.
+function formatAddress(address) {
+    if (!address) return "";
+    const parts = [address.street, address.barangay, address.city, address.province, address.zip]
+        .filter(Boolean);
+    return parts.join(", ");
+}
+
+// Pickup location is the seller's store location (plain string set by the
+// seller on profile-seller.html, e.g. "Iba, Zambales" or "14.999, 120.550").
+// It's expected to come through on the order object as order.pickupLocation
+// — populate this in db.js (getToReceiveOrdersForDelivery /
+// getPendingRiderRequests) from stores/{sellerUID}.location or
+// sellerProfiles/{sellerUsername}.location when building each order doc.
+function hasPickupLocation(order) {
+    return !!(order.pickupLocation && String(order.pickupLocation).trim());
+}
+
+// If the seller used the "Use GPS" button on profile-seller.html, their
+// saved location is raw coordinates like "14.999123, 120.550456" instead
+// of a readable place name. Detect that pattern so we know when a display
+// name needs to be looked up.
+function looksLikeCoordinates(str) {
+    return /^-?\d{1,3}(\.\d+)?\s*,\s*-?\d{1,3}(\.\d+)?$/.test(String(str).trim());
+}
+
+// Reverse-geocodes lat/lng into a readable address using OpenStreetMap's
+// free Nominatim API (no API key needed). Results are cached in memory so
+// the same coordinates aren't looked up twice in one session (e.g. several
+// pending requests from the same seller).
+const _geocodeCache = {};
+async function reverseGeocodePlaceName(lat, lng) {
+    const key = `${lat},${lng}`;
+    if (_geocodeCache[key]) return _geocodeCache[key];
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=0`);
+        const data = await res.json();
+        const name = data && data.display_name ? data.display_name : null;
+        if (name) _geocodeCache[key] = name;
+        return name;
+    } catch (e) {
+        console.warn("Reverse geocode failed:", e);
+        return null;
+    }
+}
+
+// After renderRequests() draws the raw coordinates as a placeholder, this
+// looks up a readable name for any pickup location that's still just
+// numbers and swaps the text in place once it resolves.
+async function resolvePickupPlaceNames() {
+    for (const order of _requests) {
+        if (!hasPickupLocation(order)) continue;
+        const raw = order.pickupLocation.trim();
+        if (!looksLikeCoordinates(raw)) continue;
+        const [latStr, lngStr] = raw.split(",").map(s => s.trim());
+        const lat = parseFloat(latStr), lng = parseFloat(lngStr);
+        if (isNaN(lat) || isNaN(lng)) continue;
+        const name = await reverseGeocodePlaceName(lat, lng);
+        if (!name) continue;
+        const el = document.getElementById(`pickup-name-${order.id}`);
+        if (el) el.textContent = name;
+    }
+}
+
+function pickupHtml(order) {
+    return hasPickupLocation(order)
+        ? `<div class="pickup-row">📦 <span><span class="pickup-label">Pickup at:</span> <span id="pickup-name-${order.id}">${order.pickupLocation}</span></span></div>`
+        : `<div class="pickup-row no-pickup">📦 No pickup location set by seller</div>`;
+}
+
+// Small "₱XX · X.X km" pill so riders can see the delivery fee/distance
+// tied to an order at a glance (falls back gracefully if not present).
+function feeDistancePillHtml(order) {
+    if (order.deliveryFee == null) return "";
+    if (order.deliveryFeeMethod === "distance" && order.deliveryDistanceKm != null) {
+        return `<span class="fee-pill">🛵 ₱${order.deliveryFee} · ${order.deliveryDistanceKm} km</span>`;
+    }
+    return `<span class="fee-pill estimate">🛵 ₱${order.deliveryFee} (est.)</span>`;
+}
+
+function renderRequests() {
+    const list = document.getElementById("requestList");
+    const pill = document.getElementById("reqCountPill");
+
+    if (_requests.length > 0) {
+        pill.style.display = "inline-block";
+        pill.textContent = _requests.length;
+    } else {
+        pill.style.display = "none";
+    }
+
+    list.innerHTML = "";
+    if (_requests.length === 0) {
+        list.innerHTML = `<div class="empty">No incoming delivery requests right now.</div>`;
+        return;
+    }
+
+    _requests.forEach(order => {
+        const totalPrice = (parseFloat(order.price || 0) * (order.qty || 1)).toFixed(0);
+        const addrText = formatAddress(order.address);
+        const card = document.createElement("div");
+        card.className = "order-card request-card";
+        card.innerHTML = `
+            <div class="order-body">
+                <img class="order-img" src="${order.image || ''}" alt="${order.name || ''}">
+                <div class="order-info">
+                    <div class="order-name">${order.name || '—'}</div>
+                    <div class="order-detail">Qty: <strong>${order.qty || 1}</strong> &nbsp;|&nbsp; Total: <strong>₱${totalPrice}</strong></div>
+                    <div class="order-detail">Seller: <strong>${order.sellerUsername || order.seller || '—'}</strong></div>
+                    <div class="order-detail">Customer: <strong>${order.customerUsername || order.customer || '—'}</strong></div>
+                    <div class="order-detail order-addr">
+                        ${addrText
+                            ? `📍 <span>${addrText}</span>`
+                            : `📍 <span class="no-addr">No address on file</span>`}
+                    </div>
+                    ${pickupHtml(order)}
+                    ${feeDistancePillHtml(order)}
+                </div>
+            </div>
+            <div class="card-actions" style="padding-top:0;">
+                <button class="btn-directions btn-pickup-directions" ${hasPickupLocation(order) ? '' : 'disabled'} onclick="getPickupDirections('${order.id}')">📦 See Pickup Location</button>
+            </div>
+            <div class="card-actions">
+                <button class="btn-decline" onclick="declineRequest('${order.id}')">✕ Decline</button>
+                <button class="btn-accept" onclick="acceptRequest('${order.id}', '${escAttr(order.name)}')">✓ Accept</button>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+window.acceptRequest = async function (orderId, orderName) {
+    if (!isAvailable) {
+        showToast("You're marked unavailable — switch availability on first.");
+        return;
+    }
+    try {
+        await acceptRiderRequest(orderId, currentRiderUID, currentRider);
+        _requests = _requests.filter(o => o.id !== orderId);
+        renderRequests();
+        showToast(`✓ Accepted delivery for ${orderName || "this order"}`);
+        startLocationSharing();
+        await loadOrders();
+    } catch (e) {
+        console.error(e);
+        showToast("❌ Couldn't accept the request. Try again.");
+    }
+};
+
+window.declineRequest = async function (orderId) {
+    try {
+        await declineRiderRequest(orderId, currentRiderUID);
+        _requests = _requests.filter(o => o.id !== orderId);
+        renderRequests();
+        showToast("Request declined.");
+    } catch (e) {
+        console.error(e);
+        showToast("❌ Couldn't decline the request. Try again.");
+    }
+};
+
+async function loadOrders() {
+    try {
+        const fetched = await getToReceiveOrdersForDelivery();
+        // Only show orders that are still unclaimed (no rider assigned yet)
+        // or that THIS rider is the one delivering. Orders already assigned
+        // to a different rider should stay hidden from everyone else.
+        _orders = fetched.filter(o =>
+            o.riderDeliveryStatus !== "delivered" &&
+            (!o.assignedRiderUID || o.assignedRiderUID === currentRiderUID)
+        );
+    } catch (e) {
+        console.error("Failed to load orders:", e);
+        _orders = [];
+    }
+    renderOrders();
+    if (_orders.some(o => o.assignedRiderUID === currentRiderUID)) {
+        startLocationSharing();
+    }
+}
+
+function hasRoutableAddress(order) {
+    const a = order.address;
+    if (!a) return false;
+    if (a.lat != null && a.lng != null) return true;
+    return !!formatAddress(a);
+}
+
+function renderOrders() {
+    const list  = document.getElementById("orderList");
+    const count = document.getElementById("orderCount");
+    count.textContent = _orders.length;
+
+    list.innerHTML = "";
+    if (_orders.length === 0) {
+        list.innerHTML = `<div class="empty">No orders ready for delivery right now.</div>`;
+        return;
+    }
+
+    _orders.forEach(order => {
+        const card = document.createElement("div");
+        card.className = "order-card";
+        const totalPrice = (parseFloat(order.price || 0) * (order.qty || 1)).toFixed(0);
+        const addrText = formatAddress(order.address);
+        const routable = hasRoutableAddress(order);
+        const isMine = order.assignedRiderUID === currentRiderUID;
+        card.innerHTML = `
+            <div class="order-body">
+                <img class="order-img" src="${order.image || ''}" alt="${order.name || ''}">
+                <div class="order-info">
+                    <div class="order-name">${order.name || '—'}</div>
+                    <div class="order-detail">Qty: <strong>${order.qty || 1}</strong> &nbsp;|&nbsp; Total: <strong>₱${totalPrice}</strong></div>
+                    <div class="order-detail">Seller: <strong>${order.sellerUsername || order.seller || '—'}</strong></div>
+                    <div class="order-detail">Customer: <strong>${order.customerUsername || order.customer || '—'}</strong></div>
+                    <div class="order-detail order-addr">
+                        ${addrText
+                            ? `📍 <span>${addrText}</span>`
+                            : `📍 <span class="no-addr">No address on file</span>`}
+                    </div>
+                    ${feeDistancePillHtml(order)}
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="btn-directions" ${routable ? '' : 'disabled'} onclick="getDirections('${order.id}')">🧭 Directions</button>
+                <button class="btn-deliver" onclick="openProofModal('${order.id}', '${escAttr(order.name)}')">✓ Delivered</button>
+            </div>
+            <div class="card-actions" style="padding-top:0;">
+                ${isMine
+                    ? `<button class="btn-directions" disabled style="opacity:.8; border-color:#0a5940; color:#0a5940;">🟢 Sharing live location with customer</button>`
+                    : `<button class="btn-deliver" style="background:#2ec4a6;" onclick="claimOrder('${order.id}')">📍 Start Delivery &amp; Share Location</button>`}
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+function escAttr(val) {
+    return (val || "").replace(/'/g, "\\'");
+}
+
+window.claimOrder = async function (orderId) {
+    if (!isAvailable) {
+        showToast("You're marked unavailable — switch availability on first.");
+        return;
+    }
+    try {
+        await assignRiderToOrder(orderId, currentRider, currentRiderUID);
+        const order = _orders.find(o => o.id === orderId);
+        if (order) order.assignedRiderUID = currentRiderUID;
+        renderOrders();
+        showToast("📍 Now sharing your live location with the customer!");
+        startLocationSharing();
+    } catch (e) {
+        console.error(e);
+        showToast("❌ Couldn't start tracking. Try again.");
+    }
+};
+
+let gpsWatchId = null;
+let lastGpsPush = 0;
+// Above this radius (meters), we treat the fix as a rough network/IP-based
+// guess rather than a real GPS lock — this is what causes riders to show up
+// somewhere generic like Metro Manila instead of their actual barangay.
+const GPS_ACCURACY_WARN_METERS = 3000;
+
+function startLocationSharing() {
+    if (gpsWatchId !== null) return;
+    if (!navigator.geolocation) {
+        document.getElementById("gpsStatus").textContent = "GPS not supported on this device.";
+        return;
+    }
+    document.getElementById("gpsStatus").textContent = "Requesting permission…";
+    gpsWatchId = navigator.geolocation.watchPosition(
+        async (pos) => {
+            const accuracy = pos.coords.accuracy; // meters
+            const statusEl = document.getElementById("gpsStatus");
+            if (accuracy > GPS_ACCURACY_WARN_METERS) {
+                // This is the "bakit nasa Manila si rider" case: the device
+                // isn't getting a real satellite GPS fix, so the browser is
+                // falling back to WiFi/cell-tower/IP-based location — which
+                // for a lot of PH connections resolves to somewhere broad
+                // like Metro Manila instead of the rider's real spot. We
+                // still show it (better than nothing) but flag it clearly.
+                statusEl.textContent = `Rough location only (~${Math.round(accuracy / 1000)}km accuracy) — enable Precise/GPS location on your phone`;
+                statusEl.style.color = "#b98a00";
+            } else {
+                statusEl.textContent = "Active — updating in real time";
+                statusEl.style.color = "";
+            }
+            const now = Date.now();
+            if (now - lastGpsPush < 5000) return;
+            lastGpsPush = now;
+            try {
+                await updateRiderLocation(currentRiderUID, pos.coords.latitude, pos.coords.longitude, accuracy);
+            } catch (e) {
+                console.error("Failed to push location:", e);
+            }
+        },
+        (err) => {
+            document.getElementById("gpsStatus").textContent =
+                "Location permission denied — customers won't see live tracking.";
+            console.error("Geolocation error:", err);
+        },
+        { enableHighAccuracy: true, maximumAge: 4000, timeout: 10000 }
+    );
+}
+
+window.getDirections = function (orderId) {
+    const order = _orders.find(o => o.id === orderId);
+    if (!order || !hasRoutableAddress(order)) {
+        showToast("⚠️ No address available for this order.");
+        return;
+    }
+
+    const a = order.address;
+    const destination = (a.lat != null && a.lng != null)
+        ? `${a.lat},${a.lng}`
+        : formatAddress(a);
+
+    const openMaps = (originParam) => {
+        let url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+        if (originParam) url += `&origin=${encodeURIComponent(originParam)}`;
+        window.open(url, "_blank");
+    };
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => openMaps(`${pos.coords.latitude},${pos.coords.longitude}`),
+            () => openMaps(null),
+            { enableHighAccuracy: true, timeout: 6000 }
+        );
+    } else {
+        openMaps(null);
+    }
+};
+
+// Opens Google Maps at the seller's pickup location (order.pickupLocation —
+// plain text place name or "lat,lng"). Lives on the "Delivery requests" cards.
+//
+// This is intentionally a SEARCH/PIN url, not a directions url — it just
+// drops a pin on the seller's store so the rider can see where it is,
+// with no route/travelmode calculated. If directions are wanted later,
+// switch back to maps/dir/?api=1&destination=...&travelmode=driving.
+//
+// IMPORTANT: this opens the new tab SYNCHRONOUSLY, right inside the click
+// handler — no navigator.geolocation await beforehand. Doing the lookup
+// first and calling window.open() inside its async callback breaks the
+// "direct result of a user gesture" chain on most mobile browsers, which
+// then silently blocks the popup. Keeping window.open() as the very first
+// thing in the handler avoids that.
+window.getPickupDirections = function (orderId) {
+    const order = _requests.find(o => o.id === orderId) || _orders.find(o => o.id === orderId);
+    if (!order || !hasPickupLocation(order)) {
+        showToast("⚠️ Seller hasn't set a pickup location yet.");
+        return;
+    }
+    const destination = order.pickupLocation.trim();
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`;
+    window.open(url, "_blank");
+};
+
+function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = e => {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                let w = img.width, h = img.height;
+                const maxDim = 800;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+                let quality = 0.8;
+                let dataUrl = canvas.toDataURL("image/jpeg", quality);
+                while (dataUrl.length > 600 * 1024 * 1.37 && quality > 0.15) {
+                    quality -= 0.1;
+                    dataUrl = canvas.toDataURL("image/jpeg", quality);
+                }
+                resolve(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+window.openProofModal = function (orderId, orderName) {
+    pendingOrderId = orderId;
+    pendingPhotoDataUrl = null;
+    document.getElementById("modalOrderName").textContent = orderName || "this order";
+    document.getElementById("proofInput").value = "";
+    document.getElementById("proofPreview").style.display = "none";
+    document.getElementById("uploadHint").style.display = "block";
+    document.getElementById("confirmProofBtn").disabled = true;
+    document.getElementById("proofModal").classList.add("open");
+};
+
+window.closeProofModal = function () {
+    document.getElementById("proofModal").classList.remove("open");
+    pendingOrderId = null;
+    pendingPhotoDataUrl = null;
+};
+
+document.getElementById("proofInput").addEventListener("change", async function () {
+    const file = this.files[0];
+    if (!file) return;
+    document.getElementById("uploadHint").textContent = "Processing photo...";
+    try {
+        pendingPhotoDataUrl = await compressImage(file);
+        const preview = document.getElementById("proofPreview");
+        preview.src = pendingPhotoDataUrl;
+        preview.style.display = "block";
+        document.getElementById("uploadHint").style.display = "none";
+        document.getElementById("confirmProofBtn").disabled = false;
+    } catch (e) {
+        showToast("❌ Failed to process photo.");
+        document.getElementById("uploadHint").textContent = "📷 Tap to take/upload a photo of the delivered item";
+    }
+});
+
+window.confirmProof = async function () {
+    if (!pendingOrderId || !pendingPhotoDataUrl) return;
+    const btn = document.getElementById("confirmProofBtn");
+    btn.disabled = true;
+    btn.textContent = "Submitting...";
+    try {
+        await submitDeliveryProof(pendingOrderId, currentRider, pendingPhotoDataUrl);
+        _orders = _orders.filter(o => o.id !== pendingOrderId);
+        closeProofModal();
+        showToast("✓ Marked as Delivered — proof sent to seller!");
+        renderOrders();
+    } catch (e) {
+        showToast("❌ Failed to submit proof. Try again.");
+        console.error(e);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Submit proof";
+    }
+};
+
+function showToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2800);
+}
+
+loadRiderContact();
+loadAvailability();
+loadRequests();
+loadOrders();
+setInterval(loadRequests, 6000);
+setInterval(loadOrders, 8000);
+</script>
+</body>
+</html>

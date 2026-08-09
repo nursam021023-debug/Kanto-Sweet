@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request Rider</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        background: #f0f4ff;
+        color: #2d2d2d;
+        min-height: 100vh;
+        padding-bottom: 50px;
+    }
+    .header {
+        background: linear-gradient(135deg, #0c5460 0%, #0a4a56 60%, #083d47 100%);
+        padding: 20px 20px 24px;
+        position: relative; overflow: hidden;
+    }
+    .header::after {
+        content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+        height: 20px; background: #f0f4ff; border-radius: 20px 20px 0 0;
+    }
+    .header-top { display: flex; align-items: center; gap: 12px; }
+    .back-btn {
+        background: rgba(255,255,255,0.12); border: none; border-radius: 8px;
+        color: #fff; font-size: 18px; width: 34px; height: 34px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.22); }
+    .header-title { font-size: 20px; font-weight: 800; color: #fff; }
+    .header-sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+
+    .section-label {
+        margin: 22px 20px 10px; font-size: 13px; font-weight: 800;
+        color: #5a6a8a; text-transform: uppercase; letter-spacing: .5px;
+    }
+
+    .order-list { padding: 0 20px; display: flex; flex-direction: column; gap: 14px; }
+    .empty { color: #aaa; text-align: center; padding: 30px 0; font-size: 14px; }
+    .loading { color: #888; text-align: center; padding: 30px 0; font-size: 14px; }
+
+    .order-card {
+        background: #fff; border-radius: 14px; border: 1px solid #e4e9f4;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06); overflow: hidden;
+    }
+    .order-body { display: flex; gap: 12px; padding: 14px 16px 10px; }
+    .order-img { width: 60px; height: 60px; object-fit: cover; border-radius: 10px; border: 1px solid #eee; background: #f4f4f4; flex-shrink: 0; }
+    .order-info { flex: 1; min-width: 0; }
+    .order-name { font-size: 14.5px; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; }
+    .order-detail { font-size: 12px; color: #666; margin-top: 2px; }
+    .order-detail strong { color: #333; }
+
+    /* ── Customer location (NEW) ── */
+    .order-addr {
+        display: flex; align-items: flex-start; gap: 4px;
+        font-size: 12px; color: #666; margin-top: 4px; line-height: 1.4;
+    }
+    .no-addr { color: #b98a00; font-style: italic; }
+    .fee-pill {
+        display: inline-flex; align-items: center; gap: 4px;
+        background: #eef6ff; color: #1a5fa8; font-size: 11px; font-weight: 700;
+        border: 1px solid #cfe3fb; border-radius: 999px; padding: 2px 9px;
+        margin-top: 6px; margin-right: 6px;
+    }
+    .fee-pill.estimate { background: #fff6e6; color: #a56c00; border-color: #f2dcae; }
+
+    .card-actions { padding: 6px 16px 14px; }
+    .btn-find {
+        width: 100%; padding: 11px; border: none; border-radius: 10px;
+        background: #0c5460; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .btn-find:hover { background: #083d47; }
+
+    .pending-strip {
+        margin: 0 16px 14px; padding: 10px 12px; border-radius: 10px;
+        background: #fff7e0; border: 1px solid #f2dfa0; color: #8a6d00;
+        font-size: 12.5px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .pending-strip .txt strong { color: #5c4900; }
+    .btn-cancel-req {
+        background: none; border: 1px solid #c9a600; color: #8a6d00;
+        border-radius: 8px; padding: 6px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+        flex-shrink: 0;
+    }
+    .btn-cancel-req:hover { background: #f2dfa0; }
+
+    .declined-strip {
+        margin: 0 16px 14px; padding: 10px 12px; border-radius: 10px;
+        background: #fdeaea; border: 1px solid #f2b8b8; color: #8a1c1c;
+        font-size: 12.5px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+        align-items: center; justify-content: center; z-index: 999; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+        background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 380px;
+        max-height: 80vh; display: flex; flex-direction: column;
+    }
+    .modal-box h3 { font-size: 16px; margin-bottom: 2px; }
+    .modal-box .sub { font-size: 12px; color: #888; margin-bottom: 12px; }
+    .rider-search {
+        width: 100%; padding: 9px 12px; border-radius: 9px; border: 1px solid #dde3ef;
+        font-size: 13px; margin-bottom: 12px;
+    }
+    .rider-list-scroll { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .rider-row {
+        display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+        border: 1px solid #e4e9f4; border-radius: 10px;
+    }
+    .rider-row img {
+        width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #eee; flex-shrink: 0;
+    }
+    .rider-row .rider-name { font-size: 13.5px; font-weight: 700; color: #1a1a2e; }
+    .rider-row .rider-meta { font-size: 11px; color: #888; }
+    .btn-request-rider {
+        margin-left: auto; background: #0c5460; color: #fff; border: none;
+        border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+        flex-shrink: 0;
+    }
+    .btn-request-rider:hover { background: #083d47; }
+    .no-riders { color: #aaa; text-align: center; padding: 20px 0; font-size: 13px; }
+    .modal-close {
+        margin-top: 12px; padding: 10px; border-radius: 10px; border: none;
+        background: #f0f2f8; color: #555; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+
+    .toast {
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: #1a1a2e; color: #fff; padding: 10px 18px; border-radius: 10px;
+        font-size: 13px; opacity: 0; pointer-events: none; transition: all .25s; z-index: 1000;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-top">
+        <button class="back-btn" onclick="window.location.href='homeseller.html'">&#8592;</button>
+        <div>
+            <div class="header-title">Request Rider</div>
+            <div class="header-sub" id="sellerLabel">Find a free rider for your orders</div>
+        </div>
+    </div>
+</div>
+
+<div class="section-label">Orders needing a rider</div>
+<div class="order-list" id="orderList">
+    <div class="loading">Loading orders...</div>
+</div>
+
+<!-- Rider picker modal -->
+<div class="modal-overlay" id="riderModal">
+    <div class="modal-box">
+        <h3>Choose a rider</h3>
+        <div class="sub" id="modalOrderName">—</div>
+        <input class="rider-search" id="riderSearch" type="text" placeholder="Search riders by name...">
+        <div class="rider-list-scroll" id="riderListScroll">
+            <div class="no-riders">Loading riders...</div>
+        </div>
+        <button class="modal-close" onclick="closeRiderModal()">Cancel</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/*
+ * NOTE ON db.js:
+ * This page expects the following exports from ./db.js in addition to any
+ * already existing ones:
+ *
+ *   // Orders belonging to this seller that are "to-ship" and still need a
+ *   // rider (no assignedRiderUID). Should also return requestedRiderUID /
+ *   // requestedRiderUsername / requestStatus ("pending" | "declined" | null)
+ *   // if a request has already gone out, so the UI can show its state.
+ *   export async function getOrdersNeedingRiderForSeller(sellerUsername) { ... }
+ *
+ *   // All riders currently marked available (riders/{uid}.available !== false).
+ *   // Should return [{ uid, username, profilePic, available }, ...]
+ *   export async function getAvailableRiders() { ... }
+ *
+ *   // Sends a delivery request to a specific rider for a specific order.
+ *   // Sets on the order doc: requestedRiderUID, requestedRiderUsername,
+ *   // requestStatus: "pending", requestedAt: serverTimestamp()
+ *   export async function requestRiderForOrder(orderId, riderUID, riderUsername) { ... }
+ *
+ *   // Cancels a pending request the seller made (clears requestedRiderUID /
+ *   // requestedRiderUsername / requestStatus on the order doc).
+ *   export async function cancelRiderRequest(orderId) { ... }
+ *
+ * ── CUSTOMER LOCATION (NEW) ──────────────────────────────────────────────
+ * Orders already carry a full `address` object (set at checkout in
+ * payment.html — see order.address: { fullName, phone, street, city, zip,
+ * label, lat?, lng? }). No new db.js export was needed for this — we just
+ * read order.address directly here, the same way rider-dashboard.html
+ * already does, so the seller can see exactly where the order is going
+ * before picking a rider.
+ */
+import { getOrdersNeedingRiderForSeller, getAvailableRiders, requestRiderForOrder, cancelRiderRequest } from "./db.js";
+
+const currentSeller = localStorage.getItem("currentSeller");
+if (!currentSeller) {
+    alert("Please login first.");
+    window.location.href = "seller login.html";
+    throw new Error("stop");
+}
+
+document.getElementById("sellerLabel").textContent = "Logged in as " + currentSeller;
+
+let _orders = [];
+let _availableRiders = [];
+let activeOrderId = null;
+let activeOrderName = "";
+
+async function loadOrders() {
+    try {
+        _orders = await getOrdersNeedingRiderForSeller(currentSeller);
+    } catch (e) {
+        console.error("Failed to load orders:", e);
+        _orders = [];
+    }
+    renderOrders();
+}
+
+function escAttr(val) {
+    return (val || "").replace(/'/g, "\\'");
+}
+
+// Builds a readable one-line address string from an order's address object.
+function formatAddress(address) {
+    if (!address) return "";
+    const parts = [address.street, address.barangay, address.city, address.province, address.zip]
+        .filter(Boolean);
+    return parts.join(", ");
+}
+
+// Small "₱XX · X.X km" pill so the seller can see the delivery fee/distance
+// already computed at checkout (falls back gracefully if not present).
+function feeDistancePillHtml(order) {
+    if (order.deliveryFee == null) return "";
+    if (order.deliveryFeeMethod === "distance" && order.deliveryDistanceKm != null) {
+        return `<span class="fee-pill">🛵 ₱${order.deliveryFee} · ${order.deliveryDistanceKm} km</span>`;
+    }
+    return `<span class="fee-pill estimate">🛵 ₱${order.deliveryFee} (est.)</span>`;
+}
+
+function renderOrders() {
+    const list = document.getElementById("orderList");
+    list.innerHTML = "";
+
+    if (_orders.length === 0) {
+        list.innerHTML = `<div class="empty">No orders currently need a rider.</div>`;
+        return;
+    }
+
+    _orders.forEach(order => {
+        const totalPrice = (parseFloat(order.price || 0) * (order.qty || 1)).toFixed(0);
+        const addrText = formatAddress(order.address);
+        const card = document.createElement("div");
+        card.className = "order-card";
+
+        let statusHtml = "";
+        if (order.requestStatus === "pending" && order.requestedRiderUID) {
+            statusHtml = `
+                <div class="pending-strip">
+                    <div class="txt">Waiting on <strong>${order.requestedRiderUsername || "rider"}</strong> to respond…</div>
+                    <button class="btn-cancel-req" onclick="cancelRequest('${order.id}')">Cancel</button>
+                </div>`;
+        } else if (order.requestStatus === "declined") {
+            statusHtml = `<div class="declined-strip">⚠️ ${order.requestedRiderUsername || "That rider"} declined this delivery. Choose another rider below.</div>`;
+        }
+
+        card.innerHTML = `
+            <div class="order-body">
+                <img class="order-img" src="${order.image || ''}" alt="${order.name || ''}">
+                <div class="order-info">
+                    <div class="order-name">${order.name || '—'}</div>
+                    <div class="order-detail">Qty: <strong>${order.qty || 1}</strong> &nbsp;|&nbsp; Total: <strong>₱${totalPrice}</strong></div>
+                    <div class="order-detail">Customer: <strong>${order.customerUsername || order.customer || '—'}</strong></div>
+                    <div class="order-addr">
+                        ${addrText
+                            ? `📍 <span>${addrText}</span>`
+                            : `📍 <span class="no-addr">No address on file</span>`}
+                    </div>
+                    <div>${feeDistancePillHtml(order)}</div>
+                </div>
+            </div>
+            ${statusHtml}
+            <div class="card-actions">
+                <button class="btn-find" onclick="openRiderModal('${order.id}', '${escAttr(order.name)}')"
+                    ${order.requestStatus === "pending" ? "disabled style='opacity:.5;cursor:not-allowed;'" : ""}>
+                    🔍 ${order.requestStatus === "pending" ? "Request pending" : "Find Available Rider"}
+                </button>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+window.cancelRequest = async function (orderId) {
+    try {
+        await cancelRiderRequest(orderId);
+        showToast("Request cancelled.");
+        await loadOrders();
+    } catch (e) {
+        console.error(e);
+        showToast("❌ Couldn't cancel the request.");
+    }
+};
+
+window.openRiderModal = async function (orderId, orderName) {
+    activeOrderId = orderId;
+    activeOrderName = orderName;
+    document.getElementById("modalOrderName").textContent = "For: " + (orderName || "this order");
+    document.getElementById("riderSearch").value = "";
+    document.getElementById("riderModal").classList.add("open");
+    document.getElementById("riderListScroll").innerHTML = `<div class="no-riders">Loading riders...</div>`;
+
+    try {
+        _availableRiders = await getAvailableRiders();
+    } catch (e) {
+        console.error("Failed to load riders:", e);
+        _availableRiders = [];
+    }
+    renderRiderList();
+};
+
+window.closeRiderModal = function () {
+    document.getElementById("riderModal").classList.remove("open");
+    activeOrderId = null;
+};
+
+function renderRiderList(filterText = "") {
+    const scroll = document.getElementById("riderListScroll");
+    const filtered = _availableRiders.filter(r =>
+        (r.username || "").toLowerCase().includes(filterText.toLowerCase())
+    );
+
+    if (filtered.length === 0) {
+        scroll.innerHTML = `<div class="no-riders">No available riders found.</div>`;
+        return;
+    }
+
+    scroll.innerHTML = "";
+    filtered.forEach(rider => {
+        const row = document.createElement("div");
+        row.className = "rider-row";
+        const placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23bbb'/%3E%3C/svg%3E";
+        row.innerHTML = `
+            <img src="${rider.profilePic || placeholder}" alt="${rider.username}">
+            <div>
+                <div class="rider-name">${rider.username}</div>
+                <div class="rider-meta">🟢 Available</div>
+            </div>
+            <button class="btn-request-rider" onclick="sendRequest('${rider.uid}', '${escAttr(rider.username)}')">Request</button>
+        `;
+        scroll.appendChild(row);
+    });
+}
+
+document.getElementById("riderSearch").addEventListener("input", (e) => {
+    renderRiderList(e.target.value);
+});
+
+window.sendRequest = async function (riderUID, riderUsername) {
+    if (!activeOrderId) return;
+    try {
+        await requestRiderForOrder(activeOrderId, riderUID, riderUsername);
+        showToast(`✓ Request sent to ${riderUsername}!`);
+        closeRiderModal();
+        await loadOrders();
+    } catch (e) {
+        console.error(e);
+        showToast("❌ Couldn't send the request. Try again.");
+    }
+};
+
+function showToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2800);
+}
+
+setInterval(loadOrders, 6000);
+loadOrders();
+</script>
+</body>
+</html>

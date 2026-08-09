@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart</title>
+    <link rel="stylesheet" href="cart.css">
+</head>
+<body>
+
+    <button class="back-btn" id="backBtn">&#8592; Back</button>
+    <h1 class="page-title">Shopping Cart</h1>
+    <div class="title-line"></div>
+    <div class="cart-body" id="cartBody"><p class="empty">Loading cart...</p></div>
+
+    <div class="checkout-bar" id="checkoutBar" style="display:none;">
+        <div class="checkout-left">
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+            <label for="selectAll">All</label>
+        </div>
+        <div class="checkout-right">
+            <div class="total-wrap">
+                <span class="total-label">Total:</span>
+                <span class="total-amount" id="totalAmount">₱0</span>
+            </div>
+            <button class="checkout-btn" onclick="checkout()">
+                Check Out (<span id="selectedCount">0</span>)
+            </button>
+        </div>
+    </div>
+
+<script type="module">
+import { getCart, saveCart, getAllStores } from "./db.js";
+
+const currentCustomer = localStorage.getItem("currentCustomer");
+const currentUID      = localStorage.getItem("currentCustomerUID");
+if (!currentCustomer || !currentUID) {
+    alert("Please login first.");
+    window.location.replace("login.html");
+    throw new Error("stop");
+}
+
+document.getElementById("backBtn").addEventListener("click", () => {
+    window.location.href = "foruzer.html";
+});
+
+// Load cart and stores from Firestore
+let cart   = [];
+let stores = [];
+try {
+    [cart, stores] = await Promise.all([
+        getCart(currentUID),
+        getAllStores()
+    ]);
+    cart   = cart   || [];
+    stores = stores || [];
+} catch(e) {
+    console.error("Failed to load cart:", e);
+    cart = []; stores = [];
+}
+
+function getStoreName(sellerUsername) {
+    if (!sellerUsername) return "Unknown Shop";
+    const store = stores.find(s => s.seller === sellerUsername || s.name === sellerUsername);
+    return store ? store.name : sellerUsername;
+}
+
+async function persistCart() {
+    try { await saveCart(currentUID, cart); } catch(e) { console.error("Cart save failed:", e); }
+}
+
+function renderCart() {
+    const body = document.getElementById("cartBody");
+    body.innerHTML = "";
+
+    if (cart.length === 0) {
+        body.innerHTML = "<p class='empty'>Your cart is empty.</p>";
+        document.getElementById("checkoutBar").style.display = "none";
+        return;
+    }
+
+    document.getElementById("checkoutBar").style.display = "flex";
+
+    // Group by seller
+    const grouped = {};
+    cart.forEach((item, idx) => {
+        const key = item.seller || "unknown";
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push({ ...item, _idx: idx });
+    });
+
+    Object.keys(grouped).forEach(seller => {
+        const items     = grouped[seller];
+        const storeName = getStoreName(seller);
+        const groupDiv  = document.createElement("div");
+        groupDiv.classList.add("shop-group");
+
+        groupDiv.innerHTML = `
+            <div class="shop-header">
+                <div class="shop-header-left">
+                    <input type="checkbox" class="shop-check" data-seller="${seller}" onchange="toggleShop(this)">
+                    <span class="shop-icon">&#9783;</span>
+                    <span class="shop-name">${storeName}</span>
+                </div>
+                <span class="edit-link">Edit</span>
+            </div>
+        `;
+
+        items.forEach(item => {
+            const itemDiv = document.createElement("div");
+            itemDiv.classList.add("cart-item");
+            itemDiv.innerHTML = `
+                <input type="checkbox" class="item-check" data-idx="${item._idx}" onchange="updateTotal()">
+                <img src="${item.image}" alt="${item.name}">
+                <div class="item-info">
+                    <h4 class="item-name">${item.name}</h4>
+                    <div class="item-size">${item.size || '—'}</div>
+                    <div class="item-price">₱${(parseFloat(item.price) * (item.qty || 1)).toFixed(0)}</div>
+                </div>
+                <div class="item-right">
+                    <button class="delete-btn" onclick="deleteItem(${item._idx})" title="Remove">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                            <path d="M10 11v6"/><path d="M14 11v6"/>
+                            <path d="M9 6V4h6v2"/>
+                        </svg>
+                    </button>
+                    <div class="item-qty">
+                        <button onclick="changeQty(${item._idx}, -1)">−</button>
+                        <span>${item.qty || 1}</span>
+                        <button onclick="changeQty(${item._idx}, 1)">+</button>
+                    </div>
+                </div>
+            `;
+            groupDiv.appendChild(itemDiv);
+        });
+
+        groupDiv.innerHTML += `
+            <div class="shop-footer">
+                <span>Talk to the shop owner?</span>
+                <a class="go-shop-link" onclick="goToShop('${seller}')">Go to Shop &rsaquo;</a>
+            </div>
+        `;
+
+        body.appendChild(groupDiv);
+    });
+
+    updateTotal();
+}
+
+window.deleteItem = async function(idx) {
+    if (!confirm("Remove this item from cart?")) return;
+    cart.splice(idx, 1);
+    await persistCart();
+    renderCart();
+};
+
+window.changeQty = async function(idx, delta) {
+    if (!cart[idx]) return;
+    cart[idx].qty = Math.max(1, (cart[idx].qty || 1) + delta);
+    await persistCart();
+    renderCart();
+};
+
+window.toggleShop = function(checkbox) {
+    const seller = checkbox.dataset.seller;
+    cart.forEach((item, idx) => {
+        if ((item.seller || "unknown") === seller) {
+            const cb = document.querySelector(`.item-check[data-idx="${idx}"]`);
+            if (cb) cb.checked = checkbox.checked;
+        }
+    });
+    updateTotal();
+};
+
+window.toggleSelectAll = function(checkbox) {
+    document.querySelectorAll(".item-check, .shop-check").forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    updateTotal();
+};
+
+window.updateTotal = function() {
+    const checked = document.querySelectorAll(".item-check:checked");
+    let total = 0, count = 0;
+    checked.forEach(cb => {
+        const idx = parseInt(cb.dataset.idx);
+        if (cart[idx]) {
+            total += parseFloat(cart[idx].price) * (cart[idx].qty || 1);
+            count += (cart[idx].qty || 1);
+        }
+    });
+    document.getElementById("totalAmount").innerText = "₱" + total.toFixed(0);
+    document.getElementById("selectedCount").innerText = count;
+};
+
+window.checkout = function() {
+    const checked = document.querySelectorAll(".item-check:checked");
+    if (checked.length === 0) { alert("Please select items to check out."); return; }
+    const selectedItems = [];
+    checked.forEach(cb => {
+        const idx = parseInt(cb.dataset.idx);
+        if (cart[idx]) selectedItems.push(cart[idx]);
+    });
+    localStorage.setItem("checkoutItems_" + currentCustomer, JSON.stringify(selectedItems));
+    localStorage.removeItem("buynow_" + currentCustomer);
+    window.location.href = "payment.html";
+};
+
+window.goToShop = function(seller) {
+    const store = stores.find(s => s.seller === seller || s.name === seller);
+    if (store) {
+        localStorage.setItem("selectedStore",  store.name);
+        localStorage.setItem("selectedSeller", store.seller || seller);
+        window.location.href = "shop.html";
+    } else {
+        localStorage.setItem("selectedSeller", seller);
+        window.location.href = "shop.html";
+    }
+};
+
+renderCart();
+</script>
+</body>
+</html>

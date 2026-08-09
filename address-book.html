@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Address Book</title>
+<link rel="stylesheet" href="address-book.css">
+<style>
+    #loadingOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;color:#fff;font-family:sans-serif;flex-direction:column;gap:12px;}
+    #loadingOverlay.show{display:flex;}
+    .spinner{width:32px;height:32px;border:4px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* ── Colorful address cards ── */
+    body { background: #0e0e12 !important; }
+
+    #addressList {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin: 18px 0 26px;
+    }
+
+    .address-card {
+        position: relative !important;
+        background: linear-gradient(145deg, #1c1c26, #14141c) !important;
+        border-radius: 18px !important;
+        padding: 20px 20px 18px !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-left: 5px solid #4d9de0 !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.45) !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        overflow: hidden;
+    }
+    .address-card::before {
+        content: "";
+        position: absolute; inset: 0;
+        background: radial-gradient(circle at top right, rgba(77,157,224,0.10), transparent 60%);
+        pointer-events: none;
+    }
+    .address-card:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 14px 34px rgba(0,0,0,0.55) !important;
+    }
+
+    /* Accent color per label */
+    .address-card.card-home  { border-left-color: #4d9de0 !important; }
+    .address-card.card-work  { border-left-color: #e8a020 !important; }
+    .address-card.card-other { border-left-color: #b06cf0 !important; }
+
+    .address-card.default-card {
+        border-left-color: #2ecc71 !important;
+        background: linear-gradient(145deg, #16241c, #10160f) !important;
+    }
+
+    .default-tag {
+        display: inline-block !important;
+        background: linear-gradient(90deg, #2ecc71, #27ae60) !important;
+        color: #06210f !important;
+        font-size: 0.68rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.04em !important;
+        text-transform: uppercase !important;
+        padding: 4px 10px !important;
+        border-radius: 20px !important;
+        margin-bottom: 10px !important;
+        box-shadow: 0 3px 10px rgba(46,204,113,0.4) !important;
+    }
+
+    .addr-name   { color: #fff !important; font-size: 1rem !important; margin-bottom: 4px !important; }
+    .addr-street,
+    .addr-city   { color: #b9b9c4 !important; font-size: 0.86rem !important; line-height: 1.5 !important; }
+
+    .addr-label-tag {
+        display: inline-block !important;
+        font-size: 0.68rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.05em !important;
+        padding: 4px 12px !important;
+        border-radius: 20px !important;
+        margin-top: 10px !important;
+        color: #fff !important;
+    }
+    .card-home  .addr-label-tag { background: linear-gradient(90deg, #4d9de0, #2f6fb0) !important; }
+    .card-work  .addr-label-tag { background: linear-gradient(90deg, #e8a020, #c07d0e) !important; }
+    .card-other .addr-label-tag { background: linear-gradient(90deg, #b06cf0, #8b3fd6) !important; }
+
+    .addr-actions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        margin-top: 16px !important;
+    }
+    .addr-actions button {
+        border: none !important;
+        border-radius: 20px !important;
+        padding: 8px 16px !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        font-family: 'Segoe UI', sans-serif !important;
+        cursor: pointer !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+        color: #fff !important;
+    }
+    .addr-actions button:hover { transform: translateY(-2px) !important; }
+
+    .use-addr-btn {
+        background: linear-gradient(90deg, #2ecc71, #27ae60) !important;
+        box-shadow: 0 4px 14px rgba(46,204,113,0.4) !important;
+    }
+    .addr-actions button:not(.use-addr-btn):not(.del-btn) {
+        background: linear-gradient(90deg, #4d9de0, #2f6fb0) !important;
+        box-shadow: 0 4px 14px rgba(77,157,224,0.35) !important;
+    }
+    .del-btn {
+        background: linear-gradient(90deg, #e74c3c, #c0392b) !important;
+        box-shadow: 0 4px 14px rgba(231,76,60,0.35) !important;
+    }
+</style>
+</head>
+<body>
+<div id="loadingOverlay"><div class="spinner"></div><span>Loading...</span></div>
+<button class="back-btn" onclick="goBack()">&#8592; Back</button>
+<h2 style="color: #ffffff;" id="pageTitle">My Address</h2>
+<div id="addressList"></div>
+<button class="add-btn" onclick="goToAddNewAddress()" style="
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 26px 13px 18px;
+    background: #fff;
+    color: #4a2080;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    border: 2px dashed #a07cd0;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(74,32,128,.10);
+    transition: all .2s ease;
+" 
+onmouseover="
+    this.style.background='linear-gradient(135deg,#4a2080,#8b5fcf)';
+    this.style.color='#fff';
+    this.style.border='2px dashed transparent';
+    this.style.boxShadow='0 6px 22px rgba(74,32,128,.32)';
+    this.style.transform='translateY(-2px) scale(1.02)';
+    this.querySelector('.add-icon').style.background='rgba(255,255,255,.18)';
+    this.querySelector('.add-plus').style.transform='rotate(90deg)';
+"
+onmouseout="
+    this.style.background='#fff';
+    this.style.color='#4a2080';
+    this.style.border='2px dashed #a07cd0';
+    this.style.boxShadow='0 2px 12px rgba(74,32,128,.10)';
+    this.style.transform='none';
+    this.querySelector('.add-icon').style.background='rgba(74,32,128,.08)';
+    this.querySelector('.add-plus').style.transform='rotate(0deg)';
+"
+onmousedown="this.style.transform='scale(.97)'"
+onmouseup="this.style.transform='translateY(-2px) scale(1.02)'">
+
+    <span class="add-icon" style="
+        display:flex; align-items:center; justify-content:center;
+        width:30px; height:30px;
+        background:rgba(74,32,128,.08);
+        border-radius:8px; flex-shrink:0;
+        transition:background .2s;
+    ">
+        <span class="add-plus" style="
+            font-size:20px; font-weight:300; line-height:1;
+            transition:transform .25s ease; margin-top:-1px;
+        ">+</span>
+    </span>
+
+    <span>Add New Address</span>
+
+    <svg style="opacity:.5;flex-shrink:0" width="14" height="14" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+        <circle cx="12" cy="10" r="3"/>
+    </svg>
+</button>
+
+<script type="module">
+import { getAddresses, deleteAddress, setDefaultAddress } from "./db.js";
+
+const currentCustomer = localStorage.getItem("currentCustomer");
+const currentUID      = localStorage.getItem("currentCustomerUID");
+if (!currentCustomer || !currentUID) { alert("Please login first."); window.location.href = "login.html"; throw new Error(); }
+
+// Whether we arrived here from the Payment page (customer changing/picking
+// their delivery address mid-checkout). If so, this page acts as a picker:
+// each address gets a "Use this Address" button, and Back / adding /
+// editing an address all route back to Payment when done, instead of the
+// normal Customer Profile flow.
+const returnToPayment = localStorage.getItem("addressFlowReturnTo") === "payment";
+if (returnToPayment) {
+    document.getElementById("pageTitle").textContent = "Choose Delivery Address";
+    const hint = document.createElement("p");
+    hint.textContent = "Select an address to use for this order, or add a new one.";
+    hint.style.cssText = "color:#bbb;font-size:0.85rem;margin:-6px 0 16px;";
+    document.getElementById("pageTitle").insertAdjacentElement("afterend", hint);
+}
+
+const overlay = document.getElementById("loadingOverlay");
+overlay.classList.add("show");
+
+let addresses = [];
+
+async function loadAddresses() {
+    try {
+        addresses = await getAddresses(currentUID);
+        // Addresses loaded from Firestore
+    } catch(e) {
+        addresses = [];
+    }
+    renderAddresses();
+    overlay.classList.remove("show");
+}
+
+function renderAddresses() {
+    const list = document.getElementById("addressList");
+    if (addresses.length === 0) {
+        list.innerHTML = "<p style='text-align:center;color:#888;margin:30px 0;'>No address saved yet.</p>";
+        return;
+    }
+    list.innerHTML = "";
+    addresses.forEach((addr, i) => {
+        const labelKey = (addr.label || "Home").trim().toLowerCase();
+        const labelClass = ["home", "work", "other"].includes(labelKey) ? "card-" + labelKey : "card-other";
+        const div = document.createElement("div");
+        div.className = "address-card " + labelClass + (addr.isDefault ? " default-card" : "");
+        div.innerHTML = `
+            ${addr.isDefault ? '<span class="default-tag">Default</span>' : ''}
+            <p class="addr-name"><strong>${addr.fullName}</strong> &nbsp; ${addr.phone}</p>
+            <p class="addr-street">${addr.street}</p>
+            <p class="addr-city">${addr.city}${addr.zip ? ', '+addr.zip : ''}</p>
+            <span class="addr-label-tag">${addr.label || 'HOME'}</span>
+            <div class="addr-actions">
+                ${returnToPayment ? `<button class="use-addr-btn" onclick="chooseAddress('${addr.id}')">Use this Address</button>` : ''}
+                ${!addr.isDefault ? `<button onclick="setDefault('${addr.id}')">Set as Default</button>` : ''}
+                <button onclick="editAddr('${addr.id}')">Edit</button>
+                <button class="del-btn" onclick="removeAddr('${addr.id}')">Delete</button>
+            </div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// Customer picks this address for the order currently being paid for, then
+// goes straight back to Payment with it selected.
+window.chooseAddress = function(id) {
+    localStorage.setItem("checkoutAddressId", id);
+    localStorage.removeItem("addressFlowReturnTo");
+    window.location.href = "payment.html";
+};
+
+window.setDefault = async function(id) {
+    overlay.classList.add("show");
+    try {
+        await setDefaultAddress(currentUID, id);
+        await loadAddresses();
+    } catch(e) { alert("Error: " + e.message); overlay.classList.remove("show"); }
+};
+
+window.editAddr = function(id) {
+    localStorage.setItem("editAddressId", id);
+    window.location.href = "add-new-address.html";
+};
+
+window.removeAddr = async function(id) {
+    if (!confirm("Delete this address?")) return;
+    overlay.classList.add("show");
+    try {
+        await deleteAddress(id);
+        await loadAddresses();
+    } catch(e) { alert("Error: " + e.message); overlay.classList.remove("show"); }
+};
+
+window.goToAddNewAddress = function() {
+    // The addressFlowReturnTo flag (if set) stays in localStorage as-is,
+    // so add-new-address.html knows to return to Payment after saving.
+    window.location.href = "add-new-address.html";
+};
+
+window.goBack = function() {
+    if (returnToPayment) {
+        localStorage.removeItem("addressFlowReturnTo");
+        window.location.href = "payment.html";
+    } else {
+        window.location.href = "customer-profile.html";
+    }
+};
+
+loadAddresses();
+</script>
+</body>
+</html>

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To Rate</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f4ff;
+            color: #2d2d2d;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4a2080 0%, #6a35a8 60%, #8b5fcf 100%);
+            padding: 20px 20px 28px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '⭐';
+            position: absolute;
+            right: -10px; top: -10px;
+            font-size: 90px;
+            opacity: .07;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; right: 0;
+            height: 20px;
+            background: #f0f4ff;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .header-top {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 16px;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.12);
+            border: none; border-radius: 10px;
+            color: #fff; width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 18px;
+            transition: background .15s; flex-shrink: 0;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.22); }
+
+        .header-title-wrap { flex: 1; }
+        .header-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.5); text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .header-title {
+            font-size: 20px; font-weight: 800; color: #fff;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .header-count {
+            background: rgba(255,255,255,0.15);
+            border: 1.5px solid rgba(255,255,255,0.25);
+            color: #fff; border-radius: 20px;
+            padding: 4px 14px; font-size: 12px; font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .search-wrap {
+            margin: 0 20px 14px;
+            display: flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px solid #dde3ef;
+            border-radius: 12px; padding: 10px 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        }
+        .search-wrap svg { color: #aaa; flex-shrink: 0; }
+        .search-wrap input {
+            border: none; outline: none; flex: 1;
+            font-size: 14px; background: transparent; color: #333;
+        }
+
+        .notice-banner {
+            margin: 0 20px 14px;
+            background: linear-gradient(135deg, #ede0ff, #f5f0ff);
+            border: 1.5px solid #c4adeb;
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex; align-items: flex-start; gap: 10px;
+        }
+        .notice-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+        .notice-text { font-size: 14.5px; color: #432874; line-height: 1.6; }
+        .notice-text strong { display: block; margin-bottom: 3px; font-size: 16px; }
+
+        .order-list {
+            padding: 0 20px;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-icon  { font-size: 52px; margin-bottom: 12px; }
+        .empty-title { font-size: 17px; font-weight: 700; color: #5a6a8a; margin-bottom: 6px; }
+        .empty-sub   { font-size: 13px; color: #aaa; }
+
+        .loading-state { text-align: center; padding: 60px 20px; color: #888; font-size: 14px; }
+
+        .order-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #ddd6f3;
+            box-shadow: 0 3px 12px rgba(74,32,128,.08);
+            overflow: hidden;
+            animation: fadeUp .25s ease both;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-top {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px 8px;
+            border-bottom: 1px solid #f0f3fb;
+            background: #faf8ff;
+        }
+        .card-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+
+        .type-badge {
+            font-size: 11px; font-weight: 700; padding: 3px 10px;
+            border-radius: 20px; letter-spacing: .3px;
+        }
+        .badge-order   { background: #e8f0fe; color: #3a5fcf; }
+        .badge-reserve { background: #fff3e0; color: #b05e00; }
+
+        .status-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: #e2d9f3; color: #432874;
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+        }
+        .status-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #6a35a8;
+            animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: .5; transform: scale(.7); }
+        }
+
+        .card-date { font-size: 11px; color: #bbb; white-space: nowrap; }
+
+        .card-body {
+            display: flex; gap: 12px; padding: 14px 16px 12px;
+        }
+        .item-img {
+            width: 72px; height: 72px; border-radius: 12px;
+            object-fit: cover; border: 1px solid #eee;
+            background: #f4f4f4; flex-shrink: 0;
+        }
+        .item-info { flex: 1; min-width: 0; }
+        .item-name {
+            font-size: 15px; font-weight: 700; color: #1a1a2e;
+            margin-bottom: 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .item-detail { font-size: 12px; color: #777; margin-top: 3px; }
+        .item-price  { color: #1a7a4a; font-weight: 700; }
+        .seller-row {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 12px; color: #888; margin-top: 5px;
+        }
+
+        .rating-section {
+            border-top: 1px solid #f0f3fb;
+            padding: 14px 16px 16px;
+            background: #fdf9ff;
+        }
+        .rating-label {
+            font-size: 11px; font-weight: 700; color: #6a35a8;
+            text-transform: uppercase; letter-spacing: .6px;
+            margin-bottom: 10px;
+        }
+
+        .stars-wrap {
+            display: flex; gap: 4px; margin-bottom: 8px;
+        }
+        .star {
+            font-size: 34px; cursor: pointer;
+            color: #ddd;
+            transition: color .12s, transform .1s;
+            user-select: none; line-height: 1;
+        }
+        .star.lit   { color: #f5a623; }
+        .star:hover { transform: scale(1.15); }
+        .star:active { transform: scale(.88); }
+
+        .star-hint {
+            font-size: 12px; color: #9a72c8; font-weight: 600;
+            margin-bottom: 10px; min-height: 18px;
+        }
+
+        .comment-input {
+            width: 100%; border: 1.5px solid #ddd6f3;
+            border-radius: 10px; padding: 10px 14px;
+            font-size: 13px; font-family: 'Segoe UI', sans-serif;
+            resize: none; outline: none; color: #333;
+            background: #fff; transition: border-color .15s;
+            min-height: 72px;
+        }
+        .comment-input:focus { border-color: #8b5fcf; }
+        .comment-input::placeholder { color: #bbb; }
+
+        .btn-rate {
+            margin-top: 10px; width: 100%;
+            padding: 12px; border-radius: 11px; border: none;
+            background: linear-gradient(135deg, #4a2080, #8b5fcf);
+            color: #fff; font-size: 14px; font-weight: 700;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            transition: opacity .15s, transform .1s;
+        }
+        .btn-rate:hover  { opacity: .88; }
+        .btn-rate:active { transform: scale(.97); }
+        .btn-rate:disabled {
+            background: #c4b8d8; cursor: not-allowed;
+            opacity: 1; transform: none;
+        }
+
+        .rated-wrap {
+            background: #edf7f0;
+            border: 1.5px solid #a3d7ae;
+            border-radius: 12px; padding: 12px 14px;
+        }
+        .rated-top {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 6px;
+        }
+        .rated-check {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: #2a7d4f;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 13px; font-weight: 800; flex-shrink: 0;
+        }
+        .rated-title  { font-size: 13px; font-weight: 700; color: #155724; }
+        .rated-stars  { color: #f5a623; font-size: 18px; letter-spacing: 2px; margin-bottom: 4px; }
+        .rated-comment { font-size: 12px; color: #3a7a50; font-style: italic; line-height: 1.5; }
+
+        .toast {
+            position: fixed; bottom: 28px; left: 50%;
+            transform: translateX(-50%) translateY(60px);
+            background: #4a2080; color: #fff;
+            padding: 12px 24px; border-radius: 30px;
+            font-size: 13px; font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2);
+            transition: transform .3s ease, opacity .3s ease;
+            opacity: 0; z-index: 999; white-space: nowrap;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-top">
+            <button class="back-btn" onclick="goBack()">&#8592;</button>
+            <div class="header-title-wrap">
+                <div class="header-label">My Orders</div>
+                <div class="header-title">⭐ To Rate</div>
+            </div>
+            <span class="header-count" id="orderCount">0 orders</span>
+        </div>
+    </div>
+
+    <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search item or seller..." oninput="renderOrders()">
+    </div>
+
+    <div class="notice-banner">
+        <div class="notice-icon">⭐</div>
+        <div class="notice-text">
+            <strong>Rate the item you received!</strong>
+            Choose a rate and leave a comment to help other buyers and the seller.
+        </div>
+    </div>
+
+    <div class="order-list" id="orderList">
+        <div class="loading-state">Loading orders...</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+    getOrdersByCustomer,
+    updateOrderStatus,
+    saveRating,
+    getAllStores
+} from "./db.js";
+
+const currentCustomer = localStorage.getItem("currentCustomer");
+const currentUID      = localStorage.getItem("currentCustomerUID") || "";
+
+if (!currentCustomer) {
+    alert("Please login first.");
+    window.location.href = "login.html";
+    throw new Error("stop");
+}
+
+const STAR_LABELS = ["", "Bad 😞", "Okay 😐", "Good 😊", "Very Good 😍", "Super Very Good 🤩"];
+
+// ── Cache ──────────────────────────────────────────────────────────────────
+let _toRateOrders = [];   // orders with status === "delivered" (confirmed by customer)
+let _storeCache   = null;
+const selectedStars = {};  // cardId -> star value
+
+// ── Store name helper ──────────────────────────────────────────────────────
+async function getStoreName(sellerUsername) {
+    if (!_storeCache) {
+        try { _storeCache = await getAllStores(); }
+        catch(e) { _storeCache = []; }
+    }
+    const store = _storeCache.find(s => s.seller === sellerUsername);
+    return store ? store.name : (sellerUsername || "—");
+}
+
+// ── Load from Firestore ────────────────────────────────────────────────────
+async function loadOrders() {
+    try {
+        const all = await getOrdersByCustomer(currentUID);
+        // FIX: "delivered" = customer confirmed receipt, hindi pa nira-rate
+        // "rated" = tapos na ang rating
+        // Filter: delivered pero hindi pa rated
+        _toRateOrders = all.filter(o =>
+            o.status === "delivered" && !o.rated
+        );
+    } catch(e) {
+        console.error("Failed to load orders:", e);
+        _toRateOrders = [];
+    }
+    renderOrders();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+async function renderOrders() {
+    const query   = document.getElementById("searchInput").value.trim().toLowerCase();
+    const list    = document.getElementById("orderList");
+    const countEl = document.getElementById("orderCount");
+
+    const total = _toRateOrders.length;
+    countEl.innerText = total + (total === 1 ? " order" : " orders");
+
+    let orders = _toRateOrders;
+    if (query) {
+        orders = orders.filter(o =>
+            (o.name && o.name.toLowerCase().includes(query)) ||
+            (o.sellerUsername && o.sellerUsername.toLowerCase().includes(query)) ||
+            (o.seller && o.seller.toLowerCase().includes(query))
+        );
+    }
+
+    list.innerHTML = "";
+
+    if (orders.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">⭐</div>
+                <div class="empty-title">Nothing to rate yet</div>
+                <div class="empty-sub">Items you confirmed receiving will appear here for rating.</div>
+            </div>`;
+        return;
+    }
+
+    for (let i = 0; i < orders.length; i++) {
+        const order = orders[i];
+        const cardId = order.id;
+
+        const card = document.createElement("div");
+        card.className = "order-card";
+        card.style.animationDelay = (i * 0.06) + "s";
+
+        const isReserve   = order.type === "reservation";
+        const rawDate     = order.createdAt?.seconds
+            ? new Date(order.createdAt.seconds * 1000)
+            : order.createdAt ? new Date(order.createdAt) : null;
+        const displayDate = rawDate
+            ? rawDate.toLocaleDateString("en-PH", { year:"numeric", month:"short", day:"numeric" })
+            : "—";
+        const totalPrice  = (parseFloat(order.price || 0) * (order.qty || 1)).toFixed(0);
+        const sellerKey   = order.sellerUsername || order.seller || "";
+        const storeName   = await getStoreName(sellerKey);
+
+        card.innerHTML = `
+            <div class="card-top">
+                <div class="card-meta">
+                    <span class="type-badge ${isReserve ? 'badge-reserve' : 'badge-order'}">
+                        ${isReserve ? '📅 Reservation' : '🛒 Order'}
+                    </span>
+                    <span class="status-pill">
+                        <span class="status-dot"></span>
+                        To Rate
+                    </span>
+                </div>
+                <span class="card-date">${displayDate}</span>
+            </div>
+
+            <div class="card-body">
+                <img class="item-img" src="${order.image || ''}" alt="${order.name || ''}">
+                <div class="item-info">
+                    <div class="item-name">${order.name || '—'}</div>
+                    <div class="item-detail">
+                        Size: <strong>${order.size || '—'}</strong> &nbsp;|&nbsp;
+                        Qty: <strong>${order.qty || 1}</strong>
+                    </div>
+                    <div class="item-detail">
+                        Total: <span class="item-price">₱${totalPrice}</span>
+                    </div>
+                    <div class="seller-row">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                        ${storeName}
+                    </div>
+                </div>
+            </div>
+
+            <div class="rating-section">
+                <div class="rating-label">Rate this product</div>
+                <div class="stars-wrap" id="stars_${cardId}">
+                    <span class="star" data-val="1">★</span>
+                    <span class="star" data-val="2">★</span>
+                    <span class="star" data-val="3">★</span>
+                    <span class="star" data-val="4">★</span>
+                    <span class="star" data-val="5">★</span>
+                </div>
+                <div class="star-hint" id="hint_${cardId}">Select a rating...</div>
+                <textarea class="comment-input" id="comment_${cardId}"
+                    placeholder="Write your experience with this product (optional)..."
+                    maxlength="300"></textarea>
+                <button class="btn-rate" id="rateBtn_${cardId}"
+                    data-orderid="${order.id}"
+                    data-seller="${escAttr(sellerKey)}"
+                    data-name="${escAttr(order.name)}"
+                    onclick="submitRating('${order.id}', '${escAttr(sellerKey)}')">
+                    ⭐ Submit Rating
+                </button>
+            </div>
+        `;
+
+        list.appendChild(card);
+        initStars(cardId);
+    }
+}
+
+// ── Star Logic ─────────────────────────────────────────────────────────────
+function initStars(cardId) {
+    const wrap = document.getElementById("stars_" + cardId);
+    const hint = document.getElementById("hint_"  + cardId);
+    const btn  = document.getElementById("rateBtn_" + cardId);
+    if (!wrap) return;
+
+    const stars = wrap.querySelectorAll(".star");
+
+    stars.forEach(star => {
+        const val = parseInt(star.getAttribute("data-val"));
+
+        star.addEventListener("mouseover", () => {
+            stars.forEach(s =>
+                s.classList.toggle("lit", parseInt(s.getAttribute("data-val")) <= val)
+            );
+            if (hint) hint.innerText = STAR_LABELS[val] || "";
+        });
+
+        star.addEventListener("mouseout", () => {
+            const sel = selectedStars[cardId] || 0;
+            stars.forEach(s =>
+                s.classList.toggle("lit", parseInt(s.getAttribute("data-val")) <= sel)
+            );
+            if (hint) hint.innerText = sel ? STAR_LABELS[sel] : "Select a rating...";
+        });
+
+        star.addEventListener("click", () => {
+            selectedStars[cardId] = val;
+            stars.forEach(s =>
+                s.classList.toggle("lit", parseInt(s.getAttribute("data-val")) <= val)
+            );
+            if (hint) hint.innerText = STAR_LABELS[val] || "";
+        });
+    });
+}
+
+// ── Submit Rating ──────────────────────────────────────────────────────────
+window.submitRating = async function(orderId, sellerUsername) {
+    const rating = selectedStars[orderId];
+if (!rating) { showToast("⚠️ Tip: Select a star to rate the product!"); }
+
+    const commentEl = document.getElementById("comment_" + orderId);
+    const comment   = (commentEl ? commentEl.value : "").trim();
+    const btn       = document.getElementById("rateBtn_" + orderId);
+
+    if (btn) { btn.disabled = true; btn.innerText = "Submitting..."; }
+
+    try {
+        const orderObj = _toRateOrders.find(o => o.id === orderId) || {};
+
+        await saveRating(currentUID, sellerUsername, {
+            customerUsername: currentCustomer,
+            customerName:     currentCustomer,
+            orderId:          orderId,
+            productName:      orderObj.name  || "",
+            productImage:     orderObj.image || "",
+            size:             orderObj.size  || "",
+            qty:              orderObj.qty   || 1,
+            price:            orderObj.price || "",
+            rating:           rating,
+            comment:          comment,
+            sellerUsername:   sellerUsername,
+        });
+
+        // ✅ Only set rated=true — do NOT change status away from "delivered"
+        const { db } = await import("./db.js");
+        const { doc, updateDoc, serverTimestamp } = await import(
+            "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+        );
+        await updateDoc(doc(db, "orders", orderId), {
+            rated:         true,
+            ratedAt:       serverTimestamp(),
+            rating:        rating,
+            ratingComment: comment,
+        });
+
+        _toRateOrders = _toRateOrders.filter(o => o.id !== orderId);
+        showToast("⭐ Rating submitted! Thank you.");
+        renderOrders();
+    } catch(e) {
+        console.error("Failed to submit rating:", e);
+        showToast("❌ Failed to submit rating. Please try again.");
+        if (btn) { btn.disabled = false; btn.innerText = "⭐ Submit Rating"; }
+    }
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function escAttr(val) {
+    return (val || "").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.innerText = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+window.goBack       = function() { window.location.href = "customer-profile.html"; };
+window.renderOrders = renderOrders;
+
+loadOrders();
+</script>
+</body>
+</html>

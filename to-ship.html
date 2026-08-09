@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To Ship</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f4ff;
+            color: #2d2d2d;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+ 
+        /* ── HEADER ── */
+        .header {
+            background: linear-gradient(135deg, #0c5460 0%, #0a4a56 60%, #083d47 100%);
+            padding: 20px 20px 28px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '📦';
+            position: absolute;
+            right: -10px; top: -10px;
+            font-size: 90px;
+            opacity: .07;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; right: 0;
+            height: 20px;
+            background: #f0f4ff;
+            border-radius: 20px 20px 0 0;
+        }
+ 
+        .header-top {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 16px;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.12);
+            border: none; border-radius: 10px;
+            color: #fff; width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 18px;
+            transition: background .15s; flex-shrink: 0;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.22); }
+ 
+        .header-title-wrap { flex: 1; }
+        .header-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.5); text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .header-title {
+            font-size: 20px; font-weight: 800; color: #fff;
+            display: flex; align-items: center; gap: 8px;
+        }
+ 
+        .header-count {
+            background: rgba(255,255,255,0.15);
+            border: 1.5px solid rgba(255,255,255,0.25);
+            color: #fff; border-radius: 20px;
+            padding: 4px 14px; font-size: 12px; font-weight: 700;
+            white-space: nowrap;
+        }
+ 
+        /* ── PROGRESS STEPS ── */
+        .progress-bar {
+            margin: 0 20px 14px;
+            background: #fff;
+            border-radius: 14px;
+            padding: 14px 16px;
+            border: 1px solid #dde3ef;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+        .progress-label {
+            font-size: 11px; font-weight: 700; color: #8a96b0;
+            text-transform: uppercase; letter-spacing: .8px;
+            margin-bottom: 12px;
+        }
+        .steps {
+            display: flex; align-items: center; gap: 0;
+        }
+        .step {
+            flex: 1; text-align: center; position: relative;
+        }
+        .step-circle {
+            width: 28px; height: 28px; border-radius: 50%;
+            margin: 0 auto 5px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 800;
+            border: 2px solid #dde3ef;
+            background: #fff; color: #ccc;
+            position: relative; z-index: 1;
+        }
+        .step-circle.done  { background: #d4edda; border-color: #a3d7ae; color: #155724; }
+        .step-circle.active{ background: #d1ecf1; border-color: #0c5460; color: #0c5460;
+            box-shadow: 0 0 0 4px rgba(12,84,96,.12); animation: stepPulse 1.8s ease-in-out infinite; }
+        @keyframes stepPulse {
+            0%,100% { box-shadow: 0 0 0 4px rgba(12,84,96,.12); }
+            50%      { box-shadow: 0 0 0 8px rgba(12,84,96,.04); }
+        }
+        .step-text { font-size: 10px; font-weight: 600; color: #aaa; }
+        .step-text.done   { color: #155724; }
+        .step-text.active { color: #0c5460; font-weight: 800; }
+ 
+        .step-line {
+            flex: 0 0 20px; height: 2px;
+            background: #eee; margin-bottom: 18px;
+        }
+        .step-line.done { background: #a3d7ae; }
+ 
+        /* ── SEARCH ── */
+        .search-wrap {
+            margin: 0 20px 14px;
+            display: flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px solid #dde3ef;
+            border-radius: 12px; padding: 10px 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        }
+        .search-wrap svg { color: #aaa; flex-shrink: 0; }
+        .search-wrap input {
+            border: none; outline: none; flex: 1;
+            font-size: 14px; background: transparent; color: #333;
+        }
+ 
+        /* ── ORDER LIST ── */
+        .order-list {
+            padding: 0 20px;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+ 
+        .empty-state {
+            text-align: center; padding: 60px 20px;
+        }
+        .empty-icon  { font-size: 52px; margin-bottom: 12px; }
+        .empty-title { font-size: 17px; font-weight: 700; color: #5a6a8a; margin-bottom: 6px; }
+        .empty-sub   { font-size: 13px; color: #aaa; }
+ 
+        /* ── ORDER CARD ── */
+        .order-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #c8edf3;
+            box-shadow: 0 3px 12px rgba(12,84,96,.08);
+            overflow: hidden;
+            animation: fadeUp .25s ease both;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+ 
+        .card-top {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px 8px;
+            border-bottom: 1px solid #f0f8fb;
+            background: #f7fdfe;
+        }
+        .card-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+ 
+        .type-badge {
+            font-size: 11px; font-weight: 700; padding: 3px 10px;
+            border-radius: 20px; letter-spacing: .3px;
+        }
+        .badge-order   { background: #e8f0fe; color: #3a5fcf; }
+        .badge-reserve { background: #fff3e0; color: #b05e00; }
+ 
+        .status-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: #d1ecf1; color: #0c5460;
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+        }
+        .status-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #0c5460;
+            animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%,100% { opacity:1; transform:scale(1); }
+            50%      { opacity:.4; transform:scale(.65); }
+        }
+ 
+        .card-date { font-size: 11px; color: #bbb; white-space: nowrap; }
+ 
+        /* Card Body */
+        .card-body {
+            display: flex; gap: 12px; padding: 14px 16px 10px;
+        }
+        .item-img {
+            width: 72px; height: 72px; border-radius: 12px;
+            object-fit: cover; border: 1px solid #eee;
+            background: #f4f4f4; flex-shrink: 0;
+        }
+        .item-info { flex: 1; min-width: 0; }
+        .item-name {
+            font-size: 15px; font-weight: 700; color: #1a1a2e;
+            margin-bottom: 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .item-detail { font-size: 12px; color: #777; margin-top: 3px; }
+        .item-price  { color: #1a7a4a; font-weight: 700; }
+        .seller-row {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 12px; color: #888; margin-top: 5px;
+        }
+ 
+        /* Delivery Status Strip */
+        .delivery-strip {
+            margin: 2px 16px 12px;
+            background: linear-gradient(135deg, #d1ecf1, #e8f8fb);
+            border: 1.5px solid #9eddea;
+            border-radius: 12px;
+            padding: 11px 14px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .delivery-truck {
+            font-size: 26px;
+            animation: truckMove 1.8s ease-in-out infinite;
+        }
+        @keyframes truckMove {
+            0%,100% { transform: translateX(0); }
+            50%      { transform: translateX(5px); }
+        }
+        .delivery-info { flex: 1; }
+        .delivery-title { font-size: 13px; font-weight: 800; color: #0c5460; margin-bottom: 2px; }
+        .delivery-sub   { font-size: 11px; color: #4a8a96; }
+ 
+        /* Seller Info Row */
+        .seller-info-row {
+            margin: 0 16px 12px;
+            padding: 10px 14px;
+            background: #f7f9ff;
+            border: 1px solid #e4e9f4;
+            border-radius: 10px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .seller-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg, #0c5460, #5bc8f5);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 14px; font-weight: 800;
+            flex-shrink: 0;
+        }
+        .seller-name-label { font-size: 11px; color: #aaa; }
+        .seller-name-val   { font-size: 13px; font-weight: 700; color: #1a1a2e; }
+ 
+        /* Card Actions */
+        .card-actions {
+            border-top: 1px solid #f0f3fb;
+            padding: 10px 16px 12px;
+            display: flex; gap: 8px;
+        }
+        .btn-contact {
+            flex: 1; padding: 10px 16px; border-radius: 10px;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer;
+            background: #f0f4ff; border: 1.5px solid #c0ccee;
+            color: #3a5fcf;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: background .15s;
+        }
+        .btn-contact:hover { background: #e0e8ff; }
+ 
+        .btn-track {
+            flex: 1; padding: 10px 16px; border-radius: 10px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            background: linear-gradient(135deg, #0c5460, #083d47);
+            border: none; color: #fff;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: opacity .15s;
+        }
+        .btn-track:hover { opacity: .87; }
+ 
+        /* ── TOAST ── */
+        .toast {
+            position: fixed; bottom: 28px; left: 50%;
+            transform: translateX(-50%) translateY(60px);
+            background: #1a1a2e; color: #fff;
+            padding: 12px 24px; border-radius: 30px;
+            font-size: 13px; font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2);
+            transition: transform .3s ease, opacity .3s ease;
+            opacity: 0; z-index: 999; white-space: nowrap;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+ 
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-top">
+            <button class="back-btn" onclick="goBack()">&#8592;</button>
+            <div class="header-title-wrap">
+                <div class="header-label">My Orders</div>
+                <div class="header-title">📦 To Ship / Deliver</div>
+            </div>
+            <span class="header-count" id="orderCount">0 orders</span>
+        </div>
+    </div>
+ 
+    <!-- SEARCH -->
+    <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search item or seller..." oninput="renderOrders()">
+    </div>
+ 
+    <!-- ORDER LIST -->
+    <div class="order-list" id="orderList"></div>
+ 
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+ 
+<script type="module">
+import { getOrdersByCustomer, updateOrderStatus } from "./db.js";
+
+    const currentCustomer = localStorage.getItem("currentCustomer");
+    const currentUID = localStorage.getItem("currentCustomerUID") || "";
+    if (!currentCustomer) {
+        alert("Please login first.");
+        window.location.href = "login.html";
+    }
+ 
+    // Loaded from Firestore
+    let _allOrders = [], _allReservations = [];
+    try {
+        const { getOrdersByCustomer } = await import("./db.js");
+        const all = await getOrdersByCustomer(currentUID);
+        _allOrders       = all.filter(o => o.type !== "reservation");
+        _allReservations = all.filter(o => o.type === "reservation");
+    } catch(e) { console.error("Failed to load orders:", e); }
+
+    function getToShipOrders() {
+        let result = [];
+        _allOrders.forEach((o, idx) => {
+            if (o.status === "to-ship") result.push({ ...o, _idx: o.id||idx, _type: "order" });
+        });
+        _allReservations.forEach((r, idx) => {
+            if (r.status === "to-ship") result.push({ ...r, _idx: r.id||idx, _type: "reservation" });
+        });
+        return result;
+    }
+
+    function getStoreName(seller) {
+        return seller || "—";
+    }
+ 
+    function renderOrders() {
+        const query   = document.getElementById("searchInput").value.trim().toLowerCase();
+        const raw     = getToShipOrders();
+        const countEl = document.getElementById("orderCount");
+        const list    = document.getElementById("orderList");
+ 
+        countEl.innerText = raw.length + (raw.length === 1 ? " order" : " orders");
+ 
+        let orders = raw;
+        if (query) {
+            orders = orders.filter(o =>
+                (o.name   && o.name.toLowerCase().includes(query))   ||
+                (o.seller && o.seller.toLowerCase().includes(query))
+            );
+        }
+ 
+        list.innerHTML = "";
+ 
+        if (orders.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <div class="empty-title">No orders being shipped yet</div>
+                    <div class="empty-sub">When a seller prepares your order for delivery, it will appear here.</div>
+                </div>`;
+            return;
+        }
+ 
+        _allOrders.forEach((order, i) => {
+            const card = document.createElement("div");
+            card.className = "order-card";
+            card.style.animationDelay = (i * 0.06) + "s";
+ 
+            const isReserve  = order._type === "reservation";
+            const date       = order.paidAt || order.createdAt || order.date || "";
+            const displayDate = date
+                ? new Date(date).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
+                : "—";
+            const totalPrice = (parseFloat(order.price || 0) * (order.qty || 1)).toFixed(0);
+            const storeName  = getStoreName(order.seller);
+            const sellerInit = (storeName || "S")[0].toUpperCase();
+ 
+            card.innerHTML = `
+                <div class="card-top">
+                    <div class="card-meta">
+                        <span class="type-badge ${isReserve ? 'badge-reserve' : 'badge-order'}">
+                            ${isReserve ? '📅 Reservation' : '🛒 Order'}
+                        </span>
+                        <span class="status-pill">
+                            <span class="status-dot"></span>
+                            To Ship
+                        </span>
+                    </div>
+                    <span class="card-date">${displayDate}</span>
+                </div>
+ 
+                <div class="card-body">
+                    <img class="item-img" src="${order.image || ''}" alt="${order.name || ''}">
+                    <div class="item-info">
+                        <div class="item-name">${order.name || '—'}</div>
+                        <div class="item-detail">
+                            Size: <strong>${order.size || '—'}</strong> &nbsp;|&nbsp;
+                            Qty: <strong>${order.qty || 1}</strong>
+                        </div>
+                        <div class="item-detail">
+                            Total: <span class="item-price">₱${totalPrice}</span>
+                        </div>
+                        ${order.referenceNum ? `<div class="item-detail">Ref #: <strong>${order.referenceNum}</strong></div>` : ''}
+                        <div class="seller-row">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9 22 9 12 15 12 15 22"/>
+                            </svg>
+                            ${storeName}
+                        </div>
+                    </div>
+                </div>
+ 
+                <div class="delivery-strip">
+                    <div class="delivery-truck">🚚</div>
+                    <div class="delivery-info">
+                        <div class="delivery-title">Seller is preparing your delivery</div>
+                        <div class="delivery-sub">Your item will be delivered to you soon</div>
+                    </div>
+                </div>
+            `;
+ 
+            list.appendChild(card);
+        });
+    }
+ 
+    function esc(val) {
+        return (val || "").replace(/'/g, "\\'");
+    }
+ 
+    function contactSeller(seller) {
+        showToast("Contacting: " + getStoreName(seller));
+    }
+ 
+    function showToast(msg) {
+        const t = document.getElementById("toast");
+        t.innerText = msg;
+        t.classList.add("show");
+        setTimeout(() => t.classList.remove("show"), 2800);
+    }
+ 
+    // Real-time: re-render when seller updates status
+    window.addEventListener("storage", function(e) {
+        if (
+            e.key === "orders_"       + currentCustomer ||
+            e.key === "reservations_" + currentCustomer
+        ) renderOrders();
+    });
+ 
+ window.goBack = function() { window.location.href = "customer-profile.html"; };
+ 
+    renderOrders();
+</script>
+</body>
+</html>
