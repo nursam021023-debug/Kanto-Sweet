@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Login</title>
+    <link rel="stylesheet" href="seller login.css">
+    <style>
+        input[type="email"] {
+            width: 100%; padding: 10px; margin: 8px 0;
+            border-radius: 12px; border: 1px solid rgba(255,255,255,0.2);
+            outline: none; background: rgba(255,255,255,0.05); color: #fff;
+            font-size: 0.95rem; transition: all 0.3s ease; font-family: 'Poppins', sans-serif;
+        }
+        input[type="email"]::placeholder { color: #bbb; opacity: 0.7; }
+        input[type="email"]:focus { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); }
+        #loadingOverlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55); z-index: 999;
+            justify-content: center; align-items: center;
+            color: #fff; font-size: 1.1rem; font-family: 'Poppins', sans-serif;
+        }
+        #loadingOverlay.show { display: flex; }
+        .spinner { width: 36px; height: 36px; border: 4px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 14px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .flip-container { height: 560px; }
+
+        /* ── Forgot Password link ── */
+        .forgot-link {
+        display: block;
+        text-align: center;   /* center na ngayon, hindi right */
+        margin: 10px 0 4px;   /* space sa itaas mula sa Login button */
+        font-size: 0.8rem;
+        color: rgb(255, 255, 255);
+        text-decoration: none;
+        transition: color 0.2s;
+        font-family: 'Poppins', sans-serif;
+        }
+        .forgot-link:hover { color: #fff; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <span id="loadingMsg">Please wait...</span>
+</div>
+
+<div class="flip-container" id="flipContainer">
+    <div class="flipper">
+        <div class="front login-box">
+            <button class="back-btn" onclick="goBack()">✕</button>
+            <h2>Seller Login</h2>
+            <input type="email" id="loginEmail" placeholder="Email" autocomplete="off">
+            <input type="password" id="loginPass" placeholder="Password" autocomplete="off">
+            <!-- ✅ Forgot Password link -->
+             <button onclick="login()">Login</button>
+            <div class="separator"></div>
+            <a class="forgot-link" href="forgot-password.html?from=seller-login.html">Forgot Password?</a>
+            <p>No account? <a href="#" onclick="flipToRegister()">Register here</a></p>
+        </div>
+        <div class="back login-box">
+            <button class="back-btn" onclick="flipToLogin()">✕</button>
+            <h2>Register</h2>
+            <input type="text" id="newUser" placeholder="Username" autocomplete="off">
+            <input type="email" id="newEmail" placeholder="Email" autocomplete="off">
+            <input type="password" id="newPass" placeholder="Password (min 6 chars)" autocomplete="off">
+            <input type="text" id="newShopName" placeholder="Shop Name" autocomplete="off">
+            <label class="file-label" for="profilePic">Store Profile Picture</label>
+            <input type="file" id="profilePic" accept="image/*">
+            <img id="preview" src="" alt="Preview">
+            <button onclick="register()">Register</button>
+            <div class="separator"></div>
+            <p>Already have an account? <a href="#" onclick="flipToLogin()">Login here</a></p>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",
+    authDomain: "dalocal-8ceb3.firebaseapp.com",
+    projectId: "dalocal-8ceb3",
+    storageBucket: "dalocal-8ceb3.appspot.com",
+    messagingSenderId: "737186112999",
+    appId: "1:737186112999:web:f61d20523f4ac479f8c942"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let isAuthInProgress = false;
+
+function showLoading(msg) {
+    document.getElementById("loadingMsg").textContent = msg || "Please wait...";
+    document.getElementById("loadingOverlay").classList.add("show");
+}
+function hideLoading() { document.getElementById("loadingOverlay").classList.remove("show"); }
+
+window.flipToRegister = () => document.getElementById("flipContainer").classList.add("flipped");
+window.flipToLogin    = () => document.getElementById("flipContainer").classList.remove("flipped");
+window.goBack         = () => { window.location.href = "index.html"; };
+
+document.getElementById("profilePic").addEventListener("change", function () {
+    const file = this.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = e => { const p = document.getElementById("preview"); p.src = e.target.result; p.style.display = "block"; };
+        reader.readAsDataURL(file);
+    }
+});
+
+function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = e => {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                let w = img.width, h = img.height;
+                const maxDim = 400;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+                let quality = 0.75;
+                let dataUrl = canvas.toDataURL("image/jpeg", quality);
+                while (dataUrl.length > 200 * 1024 * 1.37 && quality > 0.15) {
+                    quality -= 0.1;
+                    dataUrl = canvas.toDataURL("image/jpeg", quality);
+                }
+                resolve(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function syncSellerToLocalStorage(data, uid) {
+    localStorage.setItem("currentSeller", data.username);
+    localStorage.setItem("currentSellerUID", uid);
+    localStorage.setItem("currentSellerPic", data.profilePic || "");
+}
+
+window.login = async function () {
+    const email    = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPass").value.trim();
+    if (!email || !password) { alert("Please enter your email and password."); return; }
+
+    isAuthInProgress = true;
+    showLoading("Logging in...");
+    try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
+        const snap = await getDoc(doc(db, "sellers", uid));
+        if (!snap.exists()) {
+            const customerSnap = await getDoc(doc(db, "customers", uid));
+            hideLoading(); isAuthInProgress = false;
+            if (customerSnap.exists()) alert("This is a customer account. Please use the Customer Login page.");
+            else alert("Seller profile not found. Please register a new seller account.");
+            return;
+        }
+        syncSellerToLocalStorage(snap.data(), uid);
+        hideLoading();
+        window.location.href = "homeseller.html";
+    } catch (err) {
+        hideLoading(); isAuthInProgress = false;
+        const bad = ["auth/user-not-found","auth/wrong-password","auth/invalid-credential","auth/invalid-email"];
+        alert(bad.includes(err.code) ? "Invalid email or password. Please try again." : "Login error: " + err.message);
+    }
+};
+
+window.register = async function () {
+    const username  = document.getElementById("newUser").value.trim();
+    const email     = document.getElementById("newEmail").value.trim();
+    const password  = document.getElementById("newPass").value.trim();
+    const shopName  = document.getElementById("newShopName").value.trim();
+    const imageFile = document.getElementById("profilePic").files[0];
+
+    if (!username || !email || !password || !shopName) { alert("Please fill in all fields."); return; }
+    if (password.length < 6) { alert("Password must be at least 6 characters."); return; }
+    if (!imageFile) { alert("Please upload a store profile picture."); return; }
+
+    isAuthInProgress = true;
+    showLoading("Compressing image...");
+    try {
+        const profilePic = await compressImage(imageFile);
+        showLoading("Creating your seller account...");
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
+        const sellerData = { uid, username, email, profilePic, shopName, createdAt: new Date().toISOString(), role: "seller" };
+        await setDoc(doc(db, "sellers", uid), sellerData);
+        await setDoc(doc(db, "stores", uid), { name: shopName, photo: profilePic, location: "Local Store", seller: username, sellerUID: uid });
+        await signOut(auth);
+        isAuthInProgress = false;
+        hideLoading();
+        localStorage.removeItem("currentSeller");
+        localStorage.removeItem("currentSellerUID");
+        localStorage.removeItem("currentSellerPic");
+        alert('Registered successfully! Your store "' + shopName + '" is now live. Please login to continue, ' + username + '!');
+        flipToLogin();
+    } catch (err) {
+        hideLoading(); isAuthInProgress = false;
+        if (err.code === "auth/email-already-in-use") alert("This email is already registered. Please login instead.");
+        else alert("Registration error: " + err.message);
+    }
+};
+
+onAuthStateChanged(auth, async (user) => {
+    if (isAuthInProgress) return;
+    if (user && !document.getElementById("flipContainer").classList.contains("flipped")) {
+        try {
+            const snap = await getDoc(doc(db, "sellers", user.uid));
+            if (snap.exists()) { syncSellerToLocalStorage(snap.data(), user.uid); window.location.href = "homeseller.html"; }
+        } catch(e) { /* stay on page */ }
+    }
+});
+</script>
+</body>
+</html>

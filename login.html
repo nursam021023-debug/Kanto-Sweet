@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login / Create Account</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif; }
+
+body {
+    min-height:100vh;
+    display:flex; justify-content:flex-start; align-items:center;
+    padding:40px 20px 40px 9%;
+    background:linear-gradient(135deg, #4b4f4d, #2f3231, #3a3d3b);
+    background-size:400% 400%;
+    animation:gradientBG 15s ease infinite;
+}
+@keyframes gradientBG { 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
+
+/* ── Logo sa kanan (same as foruzer.html / homeseller.html: newcake.png,
+   right center, contain, may dark overlay effect) ── */
+body::before {
+    content:"";
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:url(images/newcake.png) no-repeat right center;
+    background-size:contain;
+    filter:brightness(0.35); /* katumbas ng rgba(0,0,0,0.65) overlay sa foruzer/homeseller */
+}
+
+/* Mas malaking login, nasa kaliwa */
+.wrap { position:relative; z-index:1; width:100%; max-width:440px; }
+
+/* ── Role selector ── */
+.role-tabs {
+    display:flex; gap:8px; margin-bottom:18px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:50px; padding:5px;
+}
+.role-tab {
+    flex:1; text-align:center; padding:12px 8px;
+    border-radius:50px; cursor:pointer; user-select:none;
+    color:#bbb; font-size:0.95rem; font-weight:600;
+    transition:all 0.25s ease;
+}
+.role-tab.active {
+    background:linear-gradient(270deg,#4b4f4d,#2f3231,#4b4f4d);
+    color:#fff;
+    box-shadow:0 6px 15px rgba(0,0,0,0.5);
+}
+
+/* ===== FLIP CONTAINER ===== */
+.flip-container { width:100%; height:clamp(600px, calc(100vh - 170px), 760px); perspective:1200px; }
+.flipper { position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform 0.7s cubic-bezier(0.4,0.2,0.2,1); }
+.flip-container.flipped .flipper { transform:rotateY(180deg); }
+
+.front, .back {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    border-radius:24px; padding:40px 34px;
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(15px);
+    box-shadow:0 20px 50px rgba(0,0,0,0.6);
+    border:1px solid rgba(255,255,255,0.1);
+    text-align:center; overflow-y:auto;
+}
+.front { transform:rotateY(0deg); }
+.back { transform:rotateY(180deg); }
+
+h2 { margin-bottom:6px; color:#fff; font-size:1.75rem; text-shadow:0 0 5px rgba(0,0,0,0.3); }
+.role-caption { color:rgba(255,255,255,0.55); font-size:0.82rem; margin-bottom:20px; letter-spacing:0.5px; text-transform:uppercase; }
+
+input[type="text"], input[type="email"], input[type="password"], input[type="tel"] {
+    width:100%; padding:14px 16px; margin:9px 0;
+    border-radius:14px; border:1px solid rgba(255,255,255,0.2);
+    outline:none; background:rgba(255,255,255,0.05); color:#fff;
+    font-size:1.02rem; transition:all 0.3s ease;
+}
+input::placeholder { color:#bbb; opacity:0.7; }
+input:focus { border-color:#fff; box-shadow:0 0 10px rgba(255,255,255,0.4); background:rgba(255,255,255,0.1); }
+
+.file-label { display:block; color:#ccc; font-size:0.9rem; text-align:left; margin:10px 0 4px 2px; }
+input[type="file"] {
+    width:100%; padding:9px; margin:4px 0 6px;
+    border-radius:14px; border:1px dashed rgba(255,255,255,0.3);
+    background:rgba(255,255,255,0.05); color:#ccc; font-size:0.9rem; cursor:pointer;
+}
+input[type="file"]:hover { border-color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.08); }
+
+#preview { display:none; width:64px; height:64px; border-radius:50%; object-fit:cover; margin:6px auto; border:2px solid rgba(255,255,255,0.3); box-shadow:0 4px 15px rgba(0,0,0,0.4); }
+#licensePreview { display:none; width:100%; max-width:220px; height:auto; border-radius:10px; margin:6px auto; border:2px solid rgba(255,255,255,0.3); box-shadow:0 4px 15px rgba(0,0,0,0.4); }
+
+/* Vehicle/license dropdown to match the existing input look */
+select#newVehicleType {
+    width:100%; padding:14px 16px; margin:9px 0;
+    border-radius:14px; border:1px solid rgba(255,255,255,0.2);
+    outline:none; background:rgba(255,255,255,0.08); color:#fff;
+    font-size:1.02rem; transition:all 0.3s ease;
+}
+select#newVehicleType:focus { border-color:#fff; box-shadow:0 0 10px rgba(255,255,255,0.4); }
+select#newVehicleType option { background:#2f3231; color:#fff; }
+
+.hidden-field { display:none !important; }
+
+p { color:#ccc; font-size:0.95rem; margin-top:12px; }
+p a { color:#fff; font-weight:600; text-decoration:underline; cursor:pointer; }
+p a:hover { color:#aad4ff; }
+
+button.primary {
+    width:100%; padding:14px; margin-top:14px;
+    border-radius:50px; border:none; font-size:1.05rem; font-weight:bold; color:#fff;
+    cursor:pointer;
+    background:linear-gradient(270deg,#4b4f4d,#2f3231,#4b4f4d);
+    background-size:400% 400%; animation:btnGradient 6s ease infinite;
+    box-shadow:0 10px 25px rgba(0,0,0,0.5); transition:all 0.3s ease;
+}
+@keyframes btnGradient { 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
+button.primary:hover { transform:translateY(-3px) scale(1.03); box-shadow:0 15px 35px rgba(0,0,0,0.6); }
+button.primary:active { transform:scale(0.97); }
+button.primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; box-shadow:0 10px 25px rgba(0,0,0,0.5); }
+
+.separator { margin:16px 0; height:1px; background:rgba(255,255,255,0.2); }
+
+.back-btn {
+    position:absolute; top:18px; right:18px; width:42px; height:42px; padding:0;
+    font-size:17px; border-radius:50%; display:flex; justify-content:center; align-items:center;
+    background:linear-gradient(270deg,#dc3545,#ff4b5c,#dc3545);
+    background-size:400% 400%; animation:backBtnGradient 6s ease infinite;
+    box-shadow:0 6px 15px rgba(0,0,0,0.5); cursor:pointer; border:none; color:#fff;
+}
+.back-btn:hover { box-shadow:0 10px 25px rgba(255,0,0,0.6); }
+@keyframes backBtnGradient { 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
+
+#loadingOverlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:999;
+    justify-content:center; align-items:center; color:#fff; font-size:1rem;
+}
+#loadingOverlay.show { display:flex; }
+.spinner { width:32px; height:32px; border:4px solid rgba(255,255,255,0.2); border-top-color:#fff; border-radius:50%; animation:spin 0.8s linear infinite; margin-right:12px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Password strength meter (new, matches existing style) ── */
+.pw-meter-track {
+    display:flex; gap:4px; margin:6px 0 2px;
+}
+.pw-meter-seg {
+    flex:1; height:5px; border-radius:4px;
+    background:rgba(255,255,255,0.15);
+    transition:background 0.3s ease;
+}
+.pw-meter-label {
+    text-align:left; font-size:0.8rem; margin:0 0 6px 2px; min-height:14px;
+    transition:color 0.3s ease;
+}
+.pw-req-list {
+    text-align:left; font-size:0.78rem; color:rgba(255,255,255,0.5);
+    list-style:none; margin:2px 0 4px 2px; line-height:1.6;
+}
+.pw-req-list li { transition:color 0.25s ease; }
+.pw-req-list li.met { color:#6fdc8c; }
+.pw-req-list li.met::before { content:"✓ "; }
+.pw-req-list li:not(.met)::before { content:"• "; }
+
+/* ── Password field + eye toggle (NEW) ──
+   Ginawang wrapper ang bawat password <input> (.pw-field) para makalagay
+   ng eye icon button (.pw-toggle-btn) sa loob ng input mismo (absolute,
+   right side) — hindi na kailangan galawin ang laki/margin ng orihinal na
+   input. Ito ay static na markup (hindi dynamically nire-render), kaya
+   hindi ito matatanggal/mawawala kahit magpalit ng role tab
+   (selectRole() -> clearAllFields() ay .value lang ang binabago, hindi
+   ang buong DOM structure). */
+.pw-field {
+    position:relative;
+    width:100%;
+}
+.pw-field input[type="password"],
+.pw-field input[type="text"] {
+    padding-right:46px; /* space for the eye icon */
+}
+.pw-toggle-btn {
+    position:absolute;
+    top:50%; right:8px;
+    transform:translateY(calc(-50% - 0px)); /* input margin is symmetric (9px top/bottom) */
+    width:28px; height:28px;
+    display:flex; align-items:center; justify-content:center;
+    background:transparent; border:none; cursor:pointer;
+    color:rgba(255,255,255,0.55);
+    padding:0; border-radius:8px;
+    transition:color 0.2s ease, background 0.2s ease;
+}
+.pw-toggle-btn:hover { color:#fff; background:rgba(255,255,255,0.08); }
+.pw-toggle-btn svg { width:20px; height:20px; pointer-events:none; }
+.pw-toggle-btn .eye-off { display:none; }
+.pw-toggle-btn.showing .eye-on  { display:none; }
+.pw-toggle-btn.showing .eye-off { display:block; }
+
+/* ── FIX: itago ang built-in na "reveal password" eye icon ng browser
+   (Microsoft Edge / IE) at ang autofill icons ng Safari/Chrome, para
+   ang custom na .pw-toggle-btn lang ang makita at hindi na dalawa ang
+   mata kapag nagtatype. ── */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="text"]::-ms-clear {
+    display:none;
+}
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-contacts-auto-fill-button {
+    visibility:hidden;
+    display:none !important;
+    pointer-events:none;
+}
+
+/* Maliit na screen: gitna ulit ang login, logo nasa likod */
+@media (max-width: 900px) {
+    body { justify-content:center; padding:30px 16px; }
+    body::before { background-position:center; opacity:0.5; }
+}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <span id="loadingMsg">Please wait...</span>
+</div>
+
+<div class="wrap">
+
+    <div class="role-tabs">
+        <div class="role-tab active" data-role="customer" onclick="selectRole('customer')">Customer</div>
+        <div class="role-tab" data-role="seller" onclick="selectRole('seller')">Seller</div>
+        <div class="role-tab" data-role="rider" onclick="selectRole('rider')">Rider</div>
+    </div>
+
+    <div class="flip-container" id="flipContainer">
+        <div class="flipper">
+
+            <!-- LOGIN -->
+            <div class="front">
+                <button class="back-btn" onclick="goBack()">✕</button>
+                <h2 id="loginTitle">Customer Login</h2>
+                <div class="role-caption" id="loginCaption">One account, sign in below</div>
+                <input type="email" id="loginEmail" placeholder="Email" autocomplete="off">
+
+                <div class="pw-field">
+                    <input type="password" id="loginPass" placeholder="Password" autocomplete="off">
+                    <button type="button" class="pw-toggle-btn" data-target="loginPass" onclick="togglePasswordVisibility(this)" aria-label="Show password">
+                        <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    </button>
+                </div>
+
+                <button class="primary" onclick="login()">Login</button>
+                <div class="separator"></div>
+                <p>No account? <a href="#" onclick="flipToRegister()">Register here</a></p>
+            </div>
+
+            <!-- REGISTER -->
+            <div class="back">
+                <button class="back-btn" onclick="flipToLogin()">✕</button>
+                <h2 id="registerTitle">Create Customer Account</h2>
+                <div class="role-caption" id="registerCaption">Fill in your details</div>
+
+                <input type="text" id="newUser" placeholder="Username" autocomplete="off">
+                <input type="email" id="newEmail" placeholder="Email" autocomplete="off">
+
+                <div class="pw-field">
+                    <input type="password" id="newPass" placeholder="Password (min 8 chars)" autocomplete="off">
+                    <button type="button" class="pw-toggle-btn" data-target="newPass" onclick="togglePasswordVisibility(this)" aria-label="Show password">
+                        <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    </button>
+                </div>
+
+                <!-- password strength meter -->
+                <div class="pw-meter-track" id="pwMeterTrack">
+                    <div class="pw-meter-seg"></div>
+                    <div class="pw-meter-seg"></div>
+                    <div class="pw-meter-seg"></div>
+                    <div class="pw-meter-seg"></div>
+                </div>
+                <div class="pw-meter-label" id="pwMeterLabel"></div>
+                <ul class="pw-req-list" id="pwReqList">
+                    <li id="reqLen">At least 8 characters</li>
+                    <li id="reqUpper">One uppercase letter</li>
+                    <li id="reqLower">One lowercase letter</li>
+                    <li id="reqNum">One number</li>
+                    <li id="reqSym">One special character (!@#$...)</li>
+                </ul>
+
+                <div class="pw-field">
+                    <input type="password" id="newPassConfirm" placeholder="Confirm Password" autocomplete="off">
+                    <button type="button" class="pw-toggle-btn" data-target="newPassConfirm" onclick="togglePasswordVisibility(this)" aria-label="Show password">
+                        <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    </button>
+                </div>
+
+                <!-- seller & rider only -->
+                <input type="tel" id="newPhone" placeholder="Contact Number (e.g. 09XXXXXXXXX)" autocomplete="off" class="hidden-field">
+
+                <!-- seller-only -->
+                <input type="text" id="newShopName" placeholder="Shop Name" autocomplete="off" class="hidden-field">
+
+                <!-- rider-only: vehicle type dropdown + "Other" custom text fallback -->
+                <select id="newVehicleType" class="hidden-field" onchange="handleVehicleTypeChange()">
+                    <option value="">Select Vehicle Type</option>
+                    <option value="Motorcycle">Motorcycle</option>
+                    <option value="Scooter">Scooter</option>
+                    <option value="Bicycle">Bicycle</option>
+                    <option value="Car">Car</option>
+                    <option value="Other">Other (please specify)</option>
+                </select>
+                <input type="text" id="newVehicleOther" placeholder="Please specify your vehicle" autocomplete="off" class="hidden-field">
+
+                <!-- rider-only: driver's license -->
+                <input type="text" id="newLicenseNumber" placeholder="Driver's License Number" autocomplete="off" class="hidden-field">
+                <label class="file-label hidden-field" id="licenseLabel" for="licensePhoto">Driver's License Photo</label>
+                <input type="file" id="licensePhoto" accept="image/*" class="hidden-field">
+                <img id="licensePreview" src="" alt="License Preview">
+
+                <!-- customer, seller & rider -->
+                <label class="file-label" id="picLabel" for="profilePic">Profile Picture</label>
+                <input type="file" id="profilePic" accept="image/*">
+                <img id="preview" src="" alt="Preview">
+
+                <button class="primary" id="registerBtn" onclick="register()">Register</button>
+                <div class="separator"></div>
+                <p>Already have an account? <a href="#" onclick="flipToLogin()">Login here</a></p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",
+    authDomain: "dalocal-8ceb3.firebaseapp.com",
+    projectId: "dalocal-8ceb3",
+    storageBucket: "dalocal-8ceb3.appspot.com",
+    messagingSenderId: "737186112999",
+    appId: "1:737186112999:web:f61d20523f4ac479f8c942"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// role config: collection name, redirect page, storage key names, label
+const ROLES = {
+    customer: { collection: "customers", redirect: "foruzer.html",           localKey: "currentCustomer", localUidKey: "currentCustomerUID", label: "Customer", needsShop:false, needsVehicle:false, needsPhone:false, needsPic:true  },
+    seller:   { collection: "sellers",   redirect: "homeseller.html",        localKey: "currentSeller",   localUidKey: "currentSellerUID",   label: "Seller",   needsShop:true,  needsVehicle:false, needsPhone:true,  needsPic:true  },
+    rider:    { collection: "riders",    redirect: "rider-home.html",     localKey: "currentRider",    localUidKey: "currentRiderUID",    label: "Rider", needsShop:false, needsVehicle:true,  needsPhone:true,  needsPic:true, needsLicense:true }
+};
+
+let currentRole = "customer";
+
+function showLoading(msg){ document.getElementById("loadingMsg").textContent = msg || "Please wait..."; document.getElementById("loadingOverlay").classList.add("show"); }
+function hideLoading(){ document.getElementById("loadingOverlay").classList.remove("show"); }
+
+// ── Show/Hide password toggle (NEW) ──────────────────────────────────────
+// Isang reusable function para sa LAHAT ng password fields (Login
+// Password, New Password, Confirm Password) — hinahanap nito ang input na
+// tinutukoy ng data-target ng button, at pinapalitan ang type nito sa
+// pagitan ng "password" at "text". Static ang markup ng bawat button/icon
+// (nasa HTML mismo, hindi dynamically ginagawa ng JS), kaya hindi ito
+// natatanggal o nawawala kahit magpalit ng role tab (selectRole() sa
+// baba ay nagbabago lang ng .value ng mga field sa pamamagitan ng
+// clearAllFields(), hindi nire-rebuild ang mga input/button elements).
+window.togglePasswordVisibility = function (btn) {
+    const targetId = btn.getAttribute("data-target");
+    const input = document.getElementById(targetId);
+    if (!input) return;
+
+    const isShowing = input.type === "text";
+    input.type = isShowing ? "password" : "text";
+    btn.classList.toggle("showing", !isShowing);
+    btn.setAttribute("aria-label", isShowing ? "Show password" : "Hide password");
+};
+
+window.selectRole = function(role){
+    currentRole = role;
+    document.querySelectorAll(".role-tab").forEach(t => t.classList.toggle("active", t.dataset.role === role));
+
+    const cfg = ROLES[role];
+    document.getElementById("loginTitle").textContent = cfg.label + " Login";
+    document.getElementById("registerTitle").textContent = "Create " + cfg.label + " Account";
+    document.getElementById("registerCaption").textContent = "Fill in your details";
+
+    document.getElementById("newPhone").classList.toggle("hidden-field", !cfg.needsPhone);
+    document.getElementById("newShopName").classList.toggle("hidden-field", !cfg.needsShop);
+    document.getElementById("newVehicleType").classList.toggle("hidden-field", !cfg.needsVehicle);
+    // newVehicleOther stays hidden even for riders unless "Other" is picked — handled by handleVehicleTypeChange()
+    document.getElementById("newVehicleOther").classList.add("hidden-field");
+    document.getElementById("newLicenseNumber").classList.toggle("hidden-field", !cfg.needsLicense);
+    document.getElementById("licenseLabel").classList.toggle("hidden-field", !cfg.needsLicense);
+    document.getElementById("licensePhoto").classList.toggle("hidden-field", !cfg.needsLicense);
+    document.getElementById("profilePic").classList.toggle("hidden-field", !cfg.needsPic);
+    document.getElementById("picLabel").classList.toggle("hidden-field", !cfg.needsPic);
+    document.getElementById("preview").style.display = "none";
+    document.getElementById("preview").src = "";
+    document.getElementById("licensePreview").style.display = "none";
+    document.getElementById("licensePreview").src = "";
+
+    clearAllFields();
+};
+
+// Shows the free-text "Please specify your vehicle" input only when the
+// rider picks "Other" from the vehicle type dropdown; otherwise the
+// dropdown's own value (e.g. "Motorcycle") is used as-is.
+window.handleVehicleTypeChange = function(){
+    const isOther = document.getElementById("newVehicleType").value === "Other";
+    document.getElementById("newVehicleOther").classList.toggle("hidden-field", !isOther);
+    if (!isOther) document.getElementById("newVehicleOther").value = "";
+};
+
+// Wipes every login & register field (and the password strength UI) so
+// switching roles never carries over what was typed for a different role.
+//
+// NOTE: hindi nito ginagalaw ang mga .pw-toggle-btn / eye icons — .value
+// lang ng mga input ang nilinis, kaya nananatili ang toggle buttons sa
+// DOM. Para hindi rin malito ang user (naka-"showing" pa ang icon pero
+// blangko/naka-reset na ang field), ino-reset din dito pabalik sa
+// "password" type + hidden state ang bawat password field sa bawat
+// role switch.
+function clearAllFields(){
+    // login fields
+    document.getElementById("loginEmail").value = "";
+    document.getElementById("loginPass").value = "";
+
+    // register fields
+    document.getElementById("newUser").value = "";
+    document.getElementById("newEmail").value = "";
+    document.getElementById("newPass").value = "";
+    document.getElementById("newPassConfirm").value = "";
+    document.getElementById("newPhone").value = "";
+    document.getElementById("newShopName").value = "";
+    document.getElementById("newVehicleType").value = "";
+    document.getElementById("newVehicleOther").value = "";
+    document.getElementById("newLicenseNumber").value = "";
+    document.getElementById("licensePhoto").value = "";
+    document.getElementById("profilePic").value = "";
+
+    // reset password strength meter UI back to empty state
+    renderStrengthUI("");
+
+    // reset all eye icons back to "hidden" (type=password) state
+    document.querySelectorAll(".pw-toggle-btn").forEach(btn => {
+        const targetId = btn.getAttribute("data-target");
+        const input = document.getElementById(targetId);
+        if (input) input.type = "password";
+        btn.classList.remove("showing");
+        btn.setAttribute("aria-label", "Show password");
+    });
+}
+
+// FIX: dati, kapag pumindot ng "Register here" mula sa Login side,
+// nananatili pa rin ang na-type na email (at password) sa Login form
+// habang nasa Create Account (register) na ang view — hindi ito
+// naa-apektuhan dahil magkaiba naman ang loginEmail/loginPass field sa
+// newEmail/newPass, pero gusto ng user na tuluyan na itong ma-clear sa
+// sandaling lumipat papunta sa Create Account, hindi lang basta
+// makatago sa likod ng flip card.
+window.flipToRegister = () => {
+    document.getElementById("flipContainer").classList.add("flipped");
+    document.getElementById("loginEmail").value = "";
+    document.getElementById("loginPass").value = "";
+    // i-reset din pabalik sa "hidden" state ang eye icon ng login password,
+    // para hindi maiwang naka-"showing" ang icon sa ibabaw ng blangkong field
+    const loginPwToggle = document.querySelector('.pw-toggle-btn[data-target="loginPass"]');
+    if (loginPwToggle) {
+        document.getElementById("loginPass").type = "password";
+        loginPwToggle.classList.remove("showing");
+        loginPwToggle.setAttribute("aria-label", "Show password");
+    }
+};
+window.flipToLogin    = () => document.getElementById("flipContainer").classList.remove("flipped");
+window.goBack          = () => { window.location.href = "index.html"; };
+
+document.getElementById("profilePic").addEventListener("change", function () {
+    const file = this.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = e => { const p = document.getElementById("preview"); p.src = e.target.result; p.style.display = "block"; };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.getElementById("licensePhoto").addEventListener("change", function () {
+    const file = this.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = e => { const p = document.getElementById("licensePreview"); p.src = e.target.result; p.style.display = "block"; };
+        reader.readAsDataURL(file);
+    }
+});
+
+/* ───────────────── Password strength logic ───────────────── */
+
+// Small blocklist of very common / easily-guessed passwords.
+const COMMON_PASSWORDS = new Set([
+    "password","password1","12345678","123456789","qwerty123",
+    "letmein123","admin123","welcome123","iloveyou1","abc123456"
+]);
+
+function evaluatePassword(pw, username, email) {
+    const checks = {
+        len:   pw.length >= 8,
+        upper: /[A-Z]/.test(pw),
+        lower: /[a-z]/.test(pw),
+        num:   /[0-9]/.test(pw),
+        sym:   /[^A-Za-z0-9]/.test(pw)
+    };
+
+    const uname = (username || "").trim().toLowerCase();
+    const localPart = (email || "").split("@")[0].trim().toLowerCase();
+    const lowerPw = pw.toLowerCase();
+
+    const isCommon = COMMON_PASSWORDS.has(lowerPw);
+    const containsUsername = uname.length >= 3 && lowerPw.includes(uname);
+    const containsEmail = localPart.length >= 3 && lowerPw.includes(localPart);
+
+    const passedCount = Object.values(checks).filter(Boolean).length;
+
+    // Overall pass/fail for allowing registration.
+    const isStrongEnough = checks.len && checks.upper && checks.lower && checks.num && checks.sym
+        && !isCommon && !containsUsername && !containsEmail;
+
+    return { checks, passedCount, isCommon, containsUsername, containsEmail, isStrongEnough };
+}
+
+function renderStrengthUI(pw) {
+    const username = document.getElementById("newUser").value;
+    const email = document.getElementById("newEmail").value;
+    const result = evaluatePassword(pw, username, email);
+
+    // requirement checklist ✓ marks
+    document.getElementById("reqLen").classList.toggle("met", result.checks.len);
+    document.getElementById("reqUpper").classList.toggle("met", result.checks.upper);
+    document.getElementById("reqLower").classList.toggle("met", result.checks.lower);
+    document.getElementById("reqNum").classList.toggle("met", result.checks.num);
+    document.getElementById("reqSym").classList.toggle("met", result.checks.sym);
+
+    // 4-segment strength bar
+    const segs = document.querySelectorAll("#pwMeterTrack .pw-meter-seg");
+    let score = result.passedCount; // 0-5
+    if (result.isCommon || result.containsUsername || result.containsEmail) score = Math.min(score, 1);
+    const filled = Math.min(4, Math.round((score / 5) * 4));
+
+    const colors = ["#ff4b5c", "#ff9f43", "#f6c344", "#6fdc8c"];
+    segs.forEach((seg, i) => {
+        seg.style.background = i < filled ? colors[Math.min(filled, 4) - 1] : "rgba(255,255,255,0.15)";
+    });
+
+    const label = document.getElementById("pwMeterLabel");
+    if (pw.length === 0) {
+        label.textContent = "";
+    } else if (result.isCommon) {
+        label.textContent = "This password is too common — choose another.";
+        label.style.color = "#ff4b5c";
+    } else if (result.containsUsername || result.containsEmail) {
+        label.textContent = "Avoid using your username or email in your password.";
+        label.style.color = "#ff4b5c";
+    } else if (result.isStrongEnough) {
+        label.textContent = "Strong password ✓";
+        label.style.color = "#6fdc8c";
+    } else if (filled >= 2) {
+        label.textContent = "Fair — meet all requirements below.";
+        label.style.color = "#f6c344";
+    } else {
+        label.textContent = "Weak password.";
+        label.style.color = "#ff4b5c";
+    }
+
+    return result;
+}
+
+const newPassInput = document.getElementById("newPass");
+newPassInput.addEventListener("input", () => renderStrengthUI(newPassInput.value));
+document.getElementById("newUser").addEventListener("input", () => renderStrengthUI(newPassInput.value));
+document.getElementById("newEmail").addEventListener("input", () => renderStrengthUI(newPassInput.value));
+
+/* ───────────────── end password strength logic ───────────────── */
+
+function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = e => {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                let w = img.width, h = img.height;
+                const maxDim = 400;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+                let quality = 0.75;
+                let dataUrl = canvas.toDataURL("image/jpeg", quality);
+                while (dataUrl.length > 200 * 1024 * 1.37 && quality > 0.15) {
+                    quality -= 0.1;
+                    dataUrl = canvas.toDataURL("image/jpeg", quality);
+                }
+                resolve(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// NOTE: This is only a basic shape/size sanity check — NOT real OCR or AI
+// document detection. Vanilla client-side JS can't actually read the image
+// and confirm it's a genuine driver's license; that kind of check needs a
+// paid OCR/ID-verification service or a human reviewer. What this DOES catch
+// is the most obvious wrong uploads: random selfies, screenshots, or images
+// that are too small/blurry to even be a scanned ID. A photo of some other
+// card (e.g. a different ID) with a similar shape can still slip through —
+// the real backstop is the admin manually checking the photo before setting
+// verificationStatus to "verified".
+function looksLikeLicensePhoto(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onerror = () => resolve(false);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onerror = () => resolve(false);
+            img.onload = () => {
+                const w = img.width, h = img.height;
+                // Too small/blurry to be a usable scanned ID.
+                if (w < 300 || h < 180) { resolve(false); return; }
+                const ratio = Math.max(w, h) / Math.min(w, h);
+                // A driver's license card is close to a credit-card ratio (~1.586).
+                // Reject near-square photos (typical selfies/profile pics) and
+                // very elongated images (typical full-page document screenshots).
+                if (ratio < 1.2 || ratio > 2.3) { resolve(false); return; }
+                resolve(true);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function syncToLocalStorage(role, data, uid) {
+    const cfg = ROLES[role];
+    localStorage.setItem(cfg.localKey, data.username);
+    localStorage.setItem(cfg.localUidKey, uid);
+    if (role === "seller") localStorage.setItem("currentSellerPic", data.profilePic || "");
+}
+
+// Look up which of the three collections this uid belongs to.
+// Checks the currently-selected role first (fast path), then falls back to
+// the others — the fallback is now used ONLY to figure out the account's
+// real role so login() can show a clear error message ("this is actually a
+// Seller account"), NOT to auto-sign the person into that other role.
+async function findAccount(uid) {
+    const order = [currentRole, ...Object.keys(ROLES).filter(r => r !== currentRole)];
+    for (const role of order) {
+        const snap = await getDoc(doc(db, ROLES[role].collection, uid));
+        if (snap.exists()) return { role, data: snap.data() };
+    }
+    return null;
+}
+
+// FIX: dati, kapag nag-login ka gamit ang email/password ng, hal., isang
+// Seller account, pero nasa "Rider" tab ka noon — hindi ito nire-reject.
+// Sa halip, matagumpay itong nag-lo-login at basta na lang inililipat
+// papunta sa SELLER dashboard (may "This account is registered as a
+// Seller account. Signing you in there." alert lang bago mag-redirect).
+// Ibig sabihin puwedeng makapasok ang isang seller account papunta sa
+// rider flow (o kabaliktaran) kahit maling tab ang pinili, dahil iisang
+// Firebase Auth session lang naman ang sinusuri, hindi ang tab/role na
+// pinili sa UI.
+//
+// Ngayon: kapag hindi tugma ang aktwal na role ng account (account.role)
+// sa currently-selected na tab (currentRole), REJECTED na ito agad —
+// isa-sign-out ang Firebase Auth session na na-create ng
+// signInWithEmailAndPassword (para hindi ito matirang "naka-login" sa
+// ibang pages/tabs), at hindi na ito mag-re-redirect kahit saan.
+// Kailangan munang pumunta ang user sa TAMANG tab (Customer / Seller /
+// Rider) bago ulit mag-login gamit ang parehong email/password.
+//
+// SECURITY NOTE: ang error message ay SADYANG generic — hindi nito
+// binabanggit kung anong role talaga ang account (hal. "this is a
+// Seller account"). Kung ipapakita 'yon, magiging paraan ito para malaman ng
+// kahit sino ang role ng isang account basta alam lang ang email nito
+// (tratang each tab bilang "oracle"). Pareho ang wording anuman ang
+// aktwal na role.
+window.login = async function () {
+    const email    = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPass").value.trim();
+    if (!email || !password) { alert("Please enter your email and password."); return; }
+
+    showLoading("Logging in...");
+    try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
+        const account = await findAccount(uid);
+
+        if (!account) {
+            await signOut(auth).catch(() => {});
+            hideLoading();
+            alert("No account profile found for this login. Please register first.");
+            return;
+        }
+
+        if (account.role !== currentRole) {
+            // Intentionally generic: we do NOT reveal which role this
+            // account is actually registered under (e.g. "this is a
+            // Seller account") — that would let anyone probe an email
+            // address across all three tabs to find out someone's account
+            // type. Same wording is used regardless of the real role.
+            await signOut(auth).catch(() => {});
+            hideLoading();
+            alert(
+                "We couldn't log you in as a " + ROLES[currentRole].label + ". " +
+                "Please make sure you're on the correct tab (Customer / Seller / Rider) for this account and try again."
+            );
+            return;
+        }
+
+        syncToLocalStorage(account.role, account.data, uid);
+        hideLoading();
+        window.location.href = ROLES[account.role].redirect;
+    } catch (err) {
+        hideLoading();
+        const bad = ["auth/user-not-found","auth/wrong-password","auth/invalid-credential","auth/invalid-email"];
+        alert(bad.includes(err.code) ? "Invalid email or password. Please try again." : "Login error: " + err.message);
+    }
+};
+
+window.register = async function () {
+    const cfg = ROLES[currentRole];
+
+    const username  = document.getElementById("newUser").value.trim();
+    const email     = document.getElementById("newEmail").value.trim();
+    const password  = document.getElementById("newPass").value.trim();
+    const confirm   = document.getElementById("newPassConfirm").value.trim();
+    const phone       = document.getElementById("newPhone").value.trim();
+    const shopName    = document.getElementById("newShopName").value.trim();
+    const vehicleType = document.getElementById("newVehicleType").value.trim();
+    const vehicleOther = document.getElementById("newVehicleOther").value.trim();
+    // If "Other" is picked, use whatever the rider typed; otherwise use the dropdown value directly.
+    const vehicle     = vehicleType === "Other" ? vehicleOther : vehicleType;
+    const licenseNumber = document.getElementById("newLicenseNumber").value.trim();
+    const licenseFile   = document.getElementById("licensePhoto").files[0];
+    const imageFile = document.getElementById("profilePic").files[0];
+
+    if (!username || !email || !password) { alert("Please fill in all required fields."); return; }
+
+    // ── Strong password enforcement ──
+    const strength = evaluatePassword(password, username, email);
+    if (!strength.isStrongEnough) {
+        let msg = "Your password isn't strong enough yet. It must have:\n"
+                + "- At least 8 characters\n"
+                + "- An uppercase and a lowercase letter\n"
+                + "- A number\n"
+                + "- A special character (e.g. !@#$%)\n"
+                + "- No common passwords, and not contain your username or email.";
+        alert(msg);
+        return;
+    }
+    if (password !== confirm) { alert("Passwords do not match. Please re-enter."); return; }
+
+    if (cfg.needsPhone && !phone) { alert("Please enter your contact number."); return; }
+    if (cfg.needsShop && !shopName) { alert("Please enter your shop name."); return; }
+    if (cfg.needsPic && !imageFile) { alert("Please upload a profile picture."); return; }
+    if (cfg.needsVehicle && !vehicleType) { alert("Please select your vehicle type."); return; }
+    if (cfg.needsVehicle && vehicleType === "Other" && !vehicleOther) { alert("Please specify your vehicle."); return; }
+    if (cfg.needsLicense && !licenseNumber) { alert("Please enter your driver's license number."); return; }
+    if (cfg.needsLicense && !licenseFile) { alert("Please upload a photo of your driver's license."); return; }
+
+    if (cfg.needsLicense && licenseFile) {
+        const validLicenseShape = await looksLikeLicensePhoto(licenseFile);
+        if (!validLicenseShape) {
+            alert("That doesn't look like a valid driver's license photo. Please upload a clear photo of your actual driver's license.");
+            return;
+        }
+    }
+
+    showLoading(cfg.needsPic ? "Compressing image..." : "Creating your account...");
+    try {
+        let profilePic = "";
+        if (cfg.needsPic) profilePic = await compressImage(imageFile);
+
+        let licensePhoto = "";
+        if (cfg.needsLicense) {
+            showLoading("Compressing license photo...");
+            licensePhoto = await compressImage(licenseFile);
+        }
+
+        showLoading("Creating your " + cfg.label.toLowerCase() + " account...");
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
+
+        const accountData = {
+            uid, username, email,
+            createdAt: new Date().toISOString(),
+            role: currentRole
+        };
+        if (cfg.needsPic) accountData.profilePic = profilePic;
+        if (cfg.needsPhone) accountData.phone = phone;
+        if (cfg.needsShop) accountData.shopName = shopName;
+        if (cfg.needsVehicle) accountData.vehicle = vehicle || "—";
+        if (cfg.needsLicense) {
+            accountData.licenseNumber = licenseNumber;
+            accountData.licensePhoto = licensePhoto;
+            // Riders start unverified until an admin checks the license photo.
+            accountData.verificationStatus = "pending";
+        }
+
+        await setDoc(doc(db, cfg.collection, uid), accountData);
+
+        if (currentRole === "seller") {
+            await setDoc(doc(db, "stores", uid), { name: shopName, photo: profilePic, location: "Local Store", seller: username, sellerUID: uid });
+            // Also seed sellerProfiles/{username} with the contact number so
+            // profile-seller.html shows it right away without needing a
+            // manual edit — it merges, so future edits there aren't overwritten.
+            await setDoc(doc(db, "sellerProfiles", username), { username, phoneNumber: phone }, { merge: true });
+        }
+
+        await signOut(auth);
+        hideLoading();
+        localStorage.removeItem(cfg.localKey);
+        localStorage.removeItem(cfg.localUidKey);
+        if (currentRole === "seller") localStorage.removeItem("currentSellerPic");
+
+        alert("Registered successfully! Please login to continue, " + username + ".");
+        window.flipToLogin();
+    } catch (err) {
+        hideLoading();
+        if (err.code === "auth/email-already-in-use") alert("This email is already registered. Please login instead.");
+        else alert("Registration error: " + err.message);
+    }
+};
+</script>
+</body>
+</html>

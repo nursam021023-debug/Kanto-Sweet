@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Analytics — Kanto Sweet</title>
+<link rel="stylesheet" href="seller dashboard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+    /* ── Page-specific styles (keeps the dark glass theme from
+       seller dashboard.css, adds the dashboard-specific bits) ── */
+
+    .container { max-width: 960px; }
+
+    #loadingOverlay {
+        display:none; position:fixed; inset:0;
+        background:rgba(0,0,0,0.65); z-index:999;
+        justify-content:center; align-items:center;
+        flex-direction:column; gap:14px;
+        color:#fff; font-size:1rem; font-family:'Segoe UI',sans-serif;
+    }
+    #loadingOverlay.show { display:flex; }
+    .spinner {
+        width:40px; height:40px;
+        border:4px solid rgba(255,255,255,0.2);
+        border-top-color:#fff; border-radius:50%;
+        animation:spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Date range filter tabs ── */
+    .range-tabs {
+        display: flex; flex-wrap: wrap; gap: 8px;
+        justify-content: center; margin: 18px 0 8px;
+    }
+    .range-tab {
+        padding: 8px 16px !important; margin: 0 !important;
+        border-radius: 30px !important;
+        font-size: 13px !important; font-weight: 700 !important;
+        background: rgba(255,255,255,0.08) !important;
+        box-shadow: none !important;
+        border: 1.5px solid rgba(255,255,255,0.18) !important;
+        color: #ddd !important;
+    }
+    .range-tab:hover { transform: translateY(-1px); }
+    .range-tab.active {
+        background: linear-gradient(135deg, #6a3de8, #9b5de5) !important;
+        border-color: transparent !important;
+        color: #fff !important;
+    }
+
+    /* ── Summary cards ── */
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+    .summary-card {
+        background: rgba(255,255,255,0.06);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 18px 14px;
+        text-align: center;
+        transition: transform .2s ease;
+    }
+    .summary-card:hover { transform: translateY(-3px); }
+    .summary-icon { font-size: 22px; margin-bottom: 6px; }
+    .summary-value {
+        font-size: 22px; font-weight: 800; color: #fff;
+        word-break: break-word;
+    }
+    .summary-label {
+        font-size: 11px; font-weight: 700; letter-spacing: .5px;
+        text-transform: uppercase; color: #aaa; margin-top: 4px;
+    }
+
+    /* ── Chart cards ── */
+    .chart-card {
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(15px);
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        padding: 20px 16px 12px;
+        margin-bottom: 26px;
+        text-align: left;
+    }
+    .chart-card-header {
+        display: flex; justify-content: space-between; align-items: center;
+        flex-wrap: wrap; gap: 8px;
+        margin-bottom: 14px;
+    }
+    .chart-card-header h3 { margin: 0; color: #fff; font-size: 16px; text-align:left; }
+
+    .metric-toggle {
+        display: flex; gap: 6px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 30px; padding: 3px;
+    }
+    .metric-toggle button {
+        padding: 6px 14px !important; margin: 0 !important;
+        font-size: 12px !important; font-weight: 700 !important;
+        border-radius: 30px !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: #ccc !important;
+    }
+    .metric-toggle button.active {
+        background: linear-gradient(135deg, #6a3de8, #9b5de5) !important;
+        color: #fff !important;
+    }
+
+    .chart-wrap { position: relative; height: 260px; }
+    .chart-wrap.short { height: 220px; }
+
+    .empty-chart {
+        text-align: center; color: #888; font-size: 13px;
+        padding: 50px 0;
+    }
+
+    /* ── Best sellers table ── */
+    .bestseller-table {
+        width: 100%; border-collapse: collapse; margin-top: 10px;
+        font-size: 13px;
+    }
+    .bestseller-table th, .bestseller-table td {
+        padding: 8px 10px; text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        color: #eee;
+    }
+    .bestseller-table th {
+        color: #aaa; font-size: 11px; text-transform: uppercase;
+        letter-spacing: .4px; font-weight: 700;
+    }
+    .bestseller-table td.num, .bestseller-table th.num { text-align: right; }
+    .rank-pill {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 20px; height: 20px; border-radius: 50%;
+        background: rgba(255,255,255,0.1); font-size: 11px; font-weight: 700;
+        margin-right: 6px;
+    }
+    .rank-pill.top1 { background: linear-gradient(135deg,#f5c518,#ffe27a); color:#3a2a00; }
+
+    @media (max-width: 480px) {
+        .chart-wrap { height: 220px; }
+    }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <span id="loadingMsg">Loading analytics...</span>
+</div>
+
+<h2>📊 Sales Analytics</h2>
+<p id="welcome"></p>
+
+<div class="container">
+
+    <!-- DATE RANGE FILTER -->
+    <div class="range-tabs" id="rangeTabs">
+        <button class="btn range-tab" data-range="today">Today</button>
+        <button class="btn range-tab" data-range="week">This Week</button>
+        <button class="btn range-tab active" data-range="month">This Month</button>
+        <button class="btn range-tab" data-range="all">All Time</button>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="summary-icon">💰</div>
+            <div class="summary-value" id="sumTotalSales">₱0</div>
+            <div class="summary-label">Total Sales</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon">🧾</div>
+            <div class="summary-value" id="sumTotalOrders">0</div>
+            <div class="summary-label">Total Orders</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon">📦</div>
+            <div class="summary-value" id="sumAvgOrder">₱0</div>
+            <div class="summary-label">Avg. Order Value</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon">🏆</div>
+            <div class="summary-value" id="sumBestSeller">—</div>
+            <div class="summary-label">Best Seller</div>
+        </div>
+    </div>
+
+    <!-- ORDERS/REVENUE PER DAY -->
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h3>Orders Over Time</h3>
+            <div class="metric-toggle" id="trendToggle">
+                <button data-metric="orders" class="active">Orders</button>
+                <button data-metric="revenue">Revenue (₱)</button>
+            </div>
+        </div>
+        <div class="chart-wrap" id="trendChartWrap">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- BEST SELLING ITEMS -->
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h3>Best-Selling Items</h3>
+        </div>
+        <div class="chart-wrap short" id="bestChartWrap">
+            <canvas id="bestChart"></canvas>
+        </div>
+        <table class="bestseller-table" id="bestTable" style="display:none;">
+            <thead>
+                <tr><th>Item</th><th class="num">Qty Sold</th><th class="num">Revenue</th></tr>
+            </thead>
+            <tbody id="bestTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="actions">
+        <button class="back-btn" onclick="window.location.href='homeseller.html'">Back</button>
+    </div>
+
+</div>
+
+<script type="module">
+import { getOrdersBySeller } from "./db.js";
+
+// ── AUTH CHECK ────────────────────────────────────────────────────────────
+const currentSeller = localStorage.getItem("currentSeller");
+if (!currentSeller) {
+    alert("Please login first.");
+    window.location.href = "seller login.html";
+    throw new Error("stop");
+}
+document.getElementById("welcome").innerText = "Welcome, " + currentSeller + "!";
+
+// ── LOADING ───────────────────────────────────────────────────────────────
+function showLoading(msg) {
+    document.getElementById("loadingMsg").textContent = msg || "Please wait...";
+    document.getElementById("loadingOverlay").classList.add("show");
+}
+function hideLoading() {
+    document.getElementById("loadingOverlay").classList.remove("show");
+}
+
+// ── WHAT COUNTS AS A "SALE" ───────────────────────────────────────────────
+// Per the seller's own definition: EVERY order that wasn't cancelled or
+// rejected counts as a sale, so they're aware of everything actually sold
+// (including orders still pending/being prepared/out for delivery) —
+// not just fully-completed ones. Only cancelled/rejected orders are
+// excluded since those never actually became a sale.
+function isCountedSale(order) {
+    return order.status !== "cancelled" && order.status !== "rejected";
+}
+
+function orderTotal(order) {
+    const price = parseFloat(order.price || 0);
+    const qty   = parseFloat(order.qty || 1);
+    return price * qty;
+}
+
+function orderDateObj(order) {
+    if (order.createdAt?.seconds) return new Date(order.createdAt.seconds * 1000);
+    if (order.createdAt) return new Date(order.createdAt);
+    return null;
+}
+
+function dateKey(d) {
+    return d.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+function pesos(n) {
+    return "₱" + Math.round(n).toLocaleString("en-PH");
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let _allOrders   = [];
+let currentRange = "month";
+let trendMetric  = "orders";
+let trendChart   = null;
+let bestChart    = null;
+
+// ── LOAD ──────────────────────────────────────────────────────────────────
+async function loadData() {
+    showLoading("Crunching your numbers...");
+    try {
+        _allOrders = await getOrdersBySeller(currentSeller);
+    } catch (e) {
+        console.error("Failed to load orders:", e);
+        _allOrders = [];
+    }
+    hideLoading();
+    render();
+}
+
+// ── DATE RANGE RESOLUTION ────────────────────────────────────────────────
+function getRangeBounds() {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (currentRange === "today") {
+        const end = new Date(startOfToday); end.setDate(end.getDate() + 1);
+        return { start: startOfToday, end };
+    }
+    if (currentRange === "week") {
+        const start = new Date(startOfToday); start.setDate(start.getDate() - 6);
+        const end = new Date(startOfToday); end.setDate(end.getDate() + 1);
+        return { start, end };
+    }
+    if (currentRange === "month") {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(startOfToday); end.setDate(end.getDate() + 1);
+        return { start, end };
+    }
+    // "all"
+    return { start: null, end: null };
+}
+
+function getFilteredOrders() {
+    const { start, end } = getRangeBounds();
+    return _allOrders.filter(o => {
+        if (!isCountedSale(o)) return false;
+        const d = orderDateObj(o);
+        if (!d) return false;
+        if (start && d < start) return false;
+        if (end && d >= end) return false;
+        return true;
+    });
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render() {
+    const orders = getFilteredOrders();
+
+    // Summary
+    const totalSales  = orders.reduce((sum, o) => sum + orderTotal(o), 0);
+    const totalOrders = orders.length;
+    const avgOrder     = totalOrders ? totalSales / totalOrders : 0;
+
+    const itemTotals = {}; // name -> { qty, revenue }
+    orders.forEach(o => {
+        const name = o.name || "Item";
+        const qty  = parseFloat(o.qty || 1);
+        if (!itemTotals[name]) itemTotals[name] = { qty: 0, revenue: 0 };
+        itemTotals[name].qty     += qty;
+        itemTotals[name].revenue += orderTotal(o);
+    });
+    const rankedItems = Object.entries(itemTotals)
+        .map(([name, v]) => ({ name, ...v }))
+        .sort((a, b) => b.qty - a.qty);
+
+    document.getElementById("sumTotalSales").textContent  = pesos(totalSales);
+    document.getElementById("sumTotalOrders").textContent = totalOrders.toLocaleString("en-PH");
+    document.getElementById("sumAvgOrder").textContent    = pesos(avgOrder);
+    document.getElementById("sumBestSeller").textContent  = rankedItems.length ? rankedItems[0].name : "—";
+
+    renderTrendChart(orders);
+    renderBestSellers(rankedItems);
+}
+
+// ── TREND CHART (orders/revenue per day) ────────────────────────────────
+function renderTrendChart(orders) {
+    const wrap = document.getElementById("trendChartWrap");
+
+    if (orders.length === 0) {
+        if (trendChart) { trendChart.destroy(); trendChart = null; }
+        wrap.innerHTML = '<div class="empty-chart">No sales yet in this range.</div>';
+        return;
+    }
+    if (!document.getElementById("trendChart")) {
+        wrap.innerHTML = '<canvas id="trendChart"></canvas>';
+    }
+
+    const byDay = {}; // dateKey -> { orders, revenue }
+    orders.forEach(o => {
+        const d = orderDateObj(o);
+        const key = dateKey(d);
+        if (!byDay[key]) byDay[key] = { orders: 0, revenue: 0 };
+        byDay[key].orders  += 1;
+        byDay[key].revenue += orderTotal(o);
+    });
+
+    // Fill in gap days so the trend line doesn't skip days with 0 sales,
+    // but cap it to a sane number of bars (max 31) so "All Time" with a
+    // long history doesn't render an unreadable chart.
+    const sortedKeys = Object.keys(byDay).sort();
+    let labels = [];
+    let dataMap = byDay;
+
+    const firstDate = new Date(sortedKeys[0]);
+    const lastDate  = new Date(sortedKeys[sortedKeys.length - 1]);
+    const spanDays  = Math.round((lastDate - firstDate) / 86400000) + 1;
+
+    if (spanDays <= 31) {
+        for (let d = new Date(firstDate); d <= lastDate; d.setDate(d.getDate() + 1)) {
+            labels.push(dateKey(new Date(d)));
+        }
+    } else {
+        // Too many days for a readable per-day chart — just show the days
+        // that actually had activity (still chronological).
+        labels = sortedKeys;
+    }
+
+    const displayLabels = labels.map(k => {
+        const d = new Date(k + "T00:00:00");
+        return d.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+    });
+
+    const ordersData  = labels.map(k => dataMap[k]?.orders  || 0);
+    const revenueData = labels.map(k => dataMap[k]?.revenue || 0);
+
+    const isRevenue = trendMetric === "revenue";
+
+    const ctx = document.getElementById("trendChart").getContext("2d");
+    if (trendChart) trendChart.destroy();
+    trendChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: displayLabels,
+            datasets: [{
+                label: isRevenue ? "Revenue (₱)" : "Orders",
+                data: isRevenue ? revenueData : ordersData,
+                backgroundColor: isRevenue ? "rgba(155,93,229,0.65)" : "rgba(30,136,229,0.65)",
+                borderRadius: 6,
+                maxBarThickness: 34
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: "#ccc", maxRotation: 60, minRotation: 0 }, grid: { color: "rgba(255,255,255,0.06)" } },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: "#ccc",
+                        callback: v => isRevenue ? "₱" + v.toLocaleString("en-PH") : v
+                    },
+                    grid: { color: "rgba(255,255,255,0.06)" }
+                }
+            }
+        }
+    });
+}
+
+// ── BEST SELLERS CHART + TABLE ──────────────────────────────────────────
+function renderBestSellers(rankedItems) {
+    const wrap  = document.getElementById("bestChartWrap");
+    const table = document.getElementById("bestTable");
+    const tbody = document.getElementById("bestTableBody");
+
+    if (rankedItems.length === 0) {
+        if (bestChart) { bestChart.destroy(); bestChart = null; }
+        wrap.innerHTML = '<div class="empty-chart">No items sold yet in this range.</div>';
+        table.style.display = "none";
+        return;
+    }
+    if (!document.getElementById("bestChart")) {
+        wrap.innerHTML = '<canvas id="bestChart"></canvas>';
+    }
+
+    const top5 = rankedItems.slice(0, 5);
+
+    const ctx = document.getElementById("bestChart").getContext("2d");
+    if (bestChart) bestChart.destroy();
+    bestChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: top5.map(i => i.name),
+            datasets: [{
+                label: "Qty Sold",
+                data: top5.map(i => i.qty),
+                backgroundColor: "rgba(255,193,7,0.75)",
+                borderRadius: 6,
+                maxBarThickness: 28
+            }]
+        },
+        options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, ticks: { color: "#ccc" }, grid: { color: "rgba(255,255,255,0.06)" } },
+                y: { ticks: { color: "#eee" }, grid: { display: false } }
+            }
+        }
+    });
+
+    // Full ranked table (not just top 5) so the seller can scroll through everything
+    table.style.display = "table";
+    tbody.innerHTML = rankedItems.map((item, i) => `
+        <tr>
+            <td><span class="rank-pill ${i === 0 ? 'top1' : ''}">${i + 1}</span>${item.name}</td>
+            <td class="num">${item.qty}</td>
+            <td class="num">${pesos(item.revenue)}</td>
+        </tr>
+    `).join("");
+}
+
+// ── FILTER UI WIRING ─────────────────────────────────────────────────────
+document.getElementById("rangeTabs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".range-tab");
+    if (!btn) return;
+    document.querySelectorAll(".range-tab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+    currentRange = btn.dataset.range;
+    render();
+});
+
+document.getElementById("trendToggle").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-metric]");
+    if (!btn) return;
+    document.querySelectorAll("#trendToggle button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    trendMetric = btn.dataset.metric;
+    render();
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>

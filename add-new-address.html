@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Address</title>
+    <link rel="stylesheet" href="add-new-address.css">
+
+    <!-- Leaflet (OpenStreetMap) — free, no API key required -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+    <style>
+        #mapPickerWrap {
+            margin: 6px 0 4px;
+        }
+        #mapHint {
+            font-size: 0.82rem;
+            color: #777;
+            margin: 0 0 8px;
+        }
+        #addressMap {
+            width: 100%;
+            height: 260px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.12);
+            z-index: 0;
+        }
+        #mapControls {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        #mapControls button {
+            border: none;
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        #useMyLocationBtn {
+            background: #4d9de0;
+            color: #fff;
+        }
+        #clearPinBtn {
+            background: #eee;
+            color: #444;
+        }
+        #pinStatus {
+            font-size: 0.8rem;
+            margin-top: 8px;
+            color: #2ecc71;
+            font-weight: 700;
+            min-height: 1.1em;
+        }
+        #pinStatus.empty {
+            color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+
+    <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+
+    <h2 class="page-title" id="formTitle">Add New Address</h2>
+
+    <div class="form-card">
+
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="fullName" placeholder="Enter full name">
+        </div>
+
+        <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" id="phone" placeholder="e.g. 09123456789">
+        </div>
+
+        <!-- ── Pin-on-map location picker ── -->
+        <div class="form-group" id="mapPickerWrap">
+            <label>Pin Your Location on the Map</label>
+            <p id="mapHint">I-tap ang mapa kung saan eksaktong nakatayo ang bahay mo, o gamitin ang "Use My Current Location".</p>
+            <div id="addressMap"></div>
+            <div id="mapControls">
+                <button type="button" id="useMyLocationBtn" onclick="useMyLocation()">📍 Use My Current Location</button>
+                <button type="button" id="clearPinBtn" onclick="clearPin()">Clear Pin</button>
+            </div>
+            <p id="pinStatus" class="empty">No location pinned yet.</p>
+        </div>
+
+        <div class="form-group">
+            <label>Street / Barangay</label>
+            <input type="text" id="street" placeholder="House no., street, barangay">
+        </div>
+
+        <div class="form-group">
+            <label>City / Municipality, Province</label>
+            <input type="text" id="city" placeholder="e.g. Iba, Zambales">
+        </div>
+
+        <div class="form-group">
+            <label>ZIP Code <span class="optional">(optional)</span></label>
+            <input type="text" id="zip" placeholder="e.g. 2201">
+        </div>
+
+        <div class="form-group">
+            <label>Label</label>
+            <div class="label-options">
+                <button type="button" class="label-btn active" onclick="selectLabel(this, 'Home')">Home</button>
+                <button type="button" class="label-btn" onclick="selectLabel(this, 'Work')">Work</button>
+                <button type="button" class="label-btn" onclick="selectLabel(this, 'Other')">Other</button>
+            </div>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <input type="checkbox" id="isDefault">
+            <label for="isDefault">Set as Default Address</label>
+        </div>
+
+        <button class="save-btn" onclick="saveAddress()">Save Address</button>
+
+    </div>
+
+<script type="module">
+import { saveAddress as dbSaveAddress, getAddresses, setDefaultAddress } from "./db.js";
+
+const currentCustomer = localStorage.getItem("currentCustomer");
+const currentUID      = localStorage.getItem("currentCustomerUID");
+if (!currentCustomer || !currentUID) { alert("Please login first."); window.location.href = "login.html"; throw new Error(); }
+
+// Whether this Add/Edit Address trip started from Payment (via "Change
+// Address"). If so, saving should drop the customer straight back onto
+// Payment using the address they just saved/edited, instead of sending
+// them to the general Address Book.
+const returnToPayment = localStorage.getItem("addressFlowReturnTo") === "payment";
+
+let selectedLabel = "Home";
+const editId = localStorage.getItem("editAddressId"); // Firestore doc ID
+
+// ── Map picker state ──
+const DEFAULT_CENTER = [12.8797, 121.7740]; // rough center of the Philippines
+const DEFAULT_ZOOM   = 6;
+let map, marker;
+let pinLat = null, pinLng = null;
+
+function initMap(centerLat, centerLng, zoom, dropPin) {
+    map = L.map("addressMap").setView(
+        centerLat != null ? [centerLat, centerLng] : DEFAULT_CENTER,
+        zoom || DEFAULT_ZOOM
+    );
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    if (dropPin && centerLat != null) {
+        setPin(centerLat, centerLng);
+    }
+
+    map.on("click", (e) => {
+        setPin(e.latlng.lat, e.latlng.lng);
+        tryReverseGeocode(e.latlng.lat, e.latlng.lng);
+    });
+}
+
+function setPin(lat, lng) {
+    pinLat = lat;
+    pinLng = lng;
+    if (marker) {
+        marker.setLatLng([lat, lng]);
+    } else {
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        marker.on("dragend", () => {
+            const pos = marker.getLatLng();
+            setPin(pos.lat, pos.lng);
+            tryReverseGeocode(pos.lat, pos.lng);
+        });
+    }
+    const statusEl = document.getElementById("pinStatus");
+    statusEl.textContent = `Pinned: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    statusEl.classList.remove("empty");
+}
+
+window.clearPin = function() {
+    pinLat = null;
+    pinLng = null;
+    if (marker) { map.removeLayer(marker); marker = null; }
+    const statusEl = document.getElementById("pinStatus");
+    statusEl.textContent = "No location pinned yet.";
+    statusEl.classList.add("empty");
+};
+
+window.useMyLocation = function() {
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported on this device/browser.");
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const { latitude, longitude } = pos.coords;
+            map.setView([latitude, longitude], 17);
+            setPin(latitude, longitude);
+            tryReverseGeocode(latitude, longitude);
+        },
+        (err) => {
+            alert("Could not get your current location: " + err.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+};
+
+// Best-effort autofill of Street/City using free OSM reverse geocoding.
+// Never overwrites fields the customer already typed in.
+async function tryReverseGeocode(lat, lng) {
+    try {
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+            { headers: { "Accept-Language": "en" } }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const addr = data.address || {};
+
+        const streetField = document.getElementById("street");
+        const cityField    = document.getElementById("city");
+
+        if (!streetField.value.trim()) {
+            const streetParts = [addr.house_number, addr.road, addr.suburb || addr.neighbourhood]
+                .filter(Boolean);
+            if (streetParts.length) streetField.value = streetParts.join(", ");
+        }
+        if (!cityField.value.trim()) {
+            const cityParts = [
+                addr.city || addr.town || addr.municipality || addr.county,
+                addr.state
+            ].filter(Boolean);
+            if (cityParts.length) cityField.value = cityParts.join(", ");
+        }
+        const zipField = document.getElementById("zip");
+        if (!zipField.value.trim() && addr.postcode) zipField.value = addr.postcode;
+    } catch (e) {
+        console.warn("Reverse geocode failed (non-fatal):", e);
+    }
+}
+
+// If editing, load the existing address
+if (editId) {
+    document.getElementById("formTitle").innerText = "Edit Address";
+    try {
+        const addrs = await getAddresses(currentUID);
+        const addr  = addrs.find(a => a.id === editId);
+        if (addr) {
+            document.getElementById("fullName").value   = addr.fullName  || "";
+            document.getElementById("phone").value      = addr.phone     || "";
+            document.getElementById("street").value     = addr.street    || "";
+            document.getElementById("city").value       = addr.city      || "";
+            document.getElementById("zip").value        = addr.zip       || "";
+            document.getElementById("isDefault").checked = addr.isDefault || false;
+            selectedLabel = addr.label || "Home";
+            document.querySelectorAll(".label-btn").forEach(btn => {
+                btn.classList.toggle("active", btn.innerText.trim() === selectedLabel);
+            });
+
+            if (typeof addr.lat === "number" && typeof addr.lng === "number") {
+                initMap(addr.lat, addr.lng, 17, true);
+            } else {
+                initMap();
+            }
+        } else {
+            initMap();
+        }
+    } catch(e) {
+        console.warn("Could not load address for edit:", e);
+        initMap();
+    }
+} else {
+    initMap();
+}
+
+window.selectLabel = function(btn, label) {
+    selectedLabel = label;
+    document.querySelectorAll(".label-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+};
+
+window.saveAddress = async function() {
+    const fullName  = document.getElementById("fullName").value.trim();
+    const phone     = document.getElementById("phone").value.trim();
+    const street    = document.getElementById("street").value.trim();
+    const city      = document.getElementById("city").value.trim();
+    const zip       = document.getElementById("zip").value.trim();
+    const isDefault = document.getElementById("isDefault").checked;
+
+    if (!fullName || !phone || !street || !city) { alert("Please fill in all required fields."); return; }
+
+    if (pinLat === null || pinLng === null) {
+        alert("Please pin your exact location on the map (tap the map or use 'Use My Current Location').");
+        return;
+    }
+
+    const addrData = {
+        fullName, phone, street, city, zip,
+        label: selectedLabel, isDefault,
+        lat: pinLat, lng: pinLng
+    };
+
+    try {
+        // If first address, auto-set as default
+        if (!editId) {
+            const existing = await getAddresses(currentUID);
+            if (existing.length === 0) addrData.isDefault = true;
+        }
+
+        const savedId = await dbSaveAddress(currentUID, addrData, editId || null);
+
+        // If set as default, update all others
+        if (isDefault) await setDefaultAddress(currentUID, savedId);
+
+        // Address saved to Firestore
+
+        localStorage.removeItem("editAddressId");
+
+        if (returnToPayment) {
+            // Came here from Payment ("Change Address") — use the address
+            // just saved for this order and send the customer straight
+            // back, instead of routing through the general Address Book.
+            localStorage.setItem("checkoutAddressId", savedId);
+            localStorage.removeItem("addressFlowReturnTo");
+            alert("Address saved!");
+            window.location.href = "payment.html";
+            return;
+        }
+
+        alert("Address saved!");
+        window.location.href = "address-book.html";
+    } catch(e) {
+        alert("Failed to save address: " + e.message);
+    }
+};
+
+window.goBack = function() {
+    localStorage.removeItem("editAddressId");
+    // addressFlowReturnTo (if set) is intentionally left as-is here — it's
+    // still needed by address-book.html to know its own Back button should
+    // return to Payment.
+    window.location.href = "address-book.html";
+};
+</script>
+
+</body>
+</html>

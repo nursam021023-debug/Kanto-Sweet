@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ratings & Reviews — DA LOCAL</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #1a7a4a;
+      --green-light: #e8f5ee;
+      --green-mid: #2e9e63;
+      --gold: #f5a623;
+      --red: #e53935;
+      --red-light: #fdecea;
+      --blue: #1a73e8;
+      --blue-light: #e8f0fe;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+      --gray-800: #1f2937;
+      --white: #ffffff;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --radius: 14px;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+    }
+
+    /* ── Top Nav ── */
+    .topnav {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 16px; height: 56px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+    .back-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: none; background: var(--gray-100);
+      color: var(--gray-800); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; transition: background .15s; flex-shrink: 0;
+    }
+    .back-btn:hover { background: var(--gray-200); }
+    .nav-title { font-size: 16px; font-weight: 700; color: var(--gray-800); flex: 1; }
+    .mark-all-btn {
+      font-size: 12px; font-weight: 600; color: var(--green);
+      background: none; border: none; cursor: pointer;
+      padding: 6px 10px; border-radius: 8px; transition: background .15s; white-space: nowrap;
+    }
+    .mark-all-btn:hover { background: var(--green-light); }
+
+    /* ── Summary Card ── */
+    .summary-card {
+      margin: 16px;
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+      border-radius: var(--radius); padding: 20px;
+      color: var(--white); display: flex; align-items: center; gap: 16px;
+    }
+    .summary-big-star { font-size: 42px; line-height: 1; }
+    .summary-info { flex: 1; }
+    .summary-score { font-size: 32px; font-weight: 800; line-height: 1; }
+    .summary-label { font-size: 13px; opacity: .85; margin-top: 2px; }
+    .summary-stars { display: flex; gap: 3px; margin-top: 6px; font-size: 16px; color: var(--gold); }
+    .summary-total { font-size: 11px; opacity: .7; margin-top: 4px; }
+    .summary-breakdown { display: flex; flex-direction: column; gap: 4px; }
+    .bar-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    .bar-label { width: 12px; text-align: right; opacity: .8; }
+    .bar-track { width: 70px; height: 5px; background: rgba(255,255,255,.25); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width .5s ease; }
+    .bar-count { opacity: .7; font-size: 10px; }
+
+    /* ── Filter Tabs ── */
+    .filter-wrap { padding: 0 16px 12px; display: flex; gap: 8px; overflow-x: auto; }
+    .filter-wrap::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      padding: 6px 14px; border-radius: 20px;
+      border: 1.5px solid var(--gray-200); background: var(--white);
+      font-size: 12px; font-weight: 600; color: var(--gray-600);
+      cursor: pointer; white-space: nowrap; transition: all .15s;
+    }
+    .filter-chip.active { background: var(--green); border-color: var(--green); color: var(--white); }
+    .filter-chip:hover:not(.active) { border-color: var(--green); color: var(--green); }
+
+    /* ── Section Header ── */
+    .section-header { padding: 4px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
+    .section-label { font-size: 13px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: .5px; }
+    .unread-badge { background: var(--red); color: var(--white); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+
+    /* ── Rating Cards ── */
+    .ratings-list { padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    .rating-card {
+      background: var(--white);
+      border-radius: var(--radius); padding: 16px;
+      box-shadow: var(--shadow-sm);
+      border: 1.5px solid transparent;
+      transition: border-color .2s, box-shadow .2s;
+      position: relative; overflow: hidden;
+    }
+    .rating-card.unread { border-color: var(--green-mid); background: #f7fffc; }
+    .rating-card.unread::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+      width: 4px; background: var(--green-mid); border-radius: 0;
+    }
+    .rating-card:hover { box-shadow: var(--shadow-md); }
+
+    /* ── Customer Header ── */
+    .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+
+    .customer-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      object-fit: cover; flex-shrink: 0;
+      border: 2.5px solid var(--green-light);
+    }
+    .avatar-initials {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: linear-gradient(135deg, #b7e4c7, var(--green-light));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 700; color: var(--green);
+      flex-shrink: 0; border: 2.5px solid #b7e4c7;
+    }
+
+    .card-meta { flex: 1; min-width: 0; }
+    .customer-name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .customer-name { font-size: 15px; font-weight: 700; color: var(--gray-800); }
+    .new-dot { display: inline-block; width: 8px; height: 8px; background: var(--green-mid); border-radius: 50%; }
+    .card-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+    .ordered-preview { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .ordered-pill {
+      font-size: 10px; font-weight: 600;
+      background: var(--green-light); color: var(--green);
+      border-radius: 20px; padding: 2px 8px;
+      display: flex; align-items: center; gap: 3px; white-space: nowrap;
+    }
+    .ordered-pill i { font-size: 8px; opacity: .7; }
+
+    .stars-inline { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+    .star { font-size: 14px; color: var(--gray-200); }
+    .star.filled { color: var(--gold); }
+    .rating-num { font-size: 12px; font-weight: 700; color: var(--gray-800); margin-left: 4px; }
+
+    /* ── Order Details Box ── */
+    .order-box {
+      background: var(--gray-50); border: 1px solid var(--gray-100);
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+    }
+    .order-box-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+    }
+    .order-box-label {
+      font-size: 10px; font-weight: 700; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: .6px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .order-id-badge {
+      font-size: 10px; font-weight: 700; color: var(--green);
+      background: var(--green-light); padding: 2px 8px; border-radius: 20px;
+    }
+    .order-items-table { width: 100%; border-collapse: collapse; }
+    .order-items-table thead tr { border-bottom: 1px solid var(--gray-200); }
+    .order-items-table thead th {
+      font-size: 9px; font-weight: 700; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: .5px;
+      padding: 0 4px 6px; text-align: left;
+    }
+    .order-items-table thead th:last-child { text-align: right; }
+    .order-items-table tbody tr { border-bottom: 1px solid var(--gray-100); }
+    .order-items-table tbody tr:last-child { border-bottom: none; }
+    .order-items-table tbody td { padding: 7px 4px; vertical-align: middle; }
+    .item-img-placeholder {
+      width: 32px; height: 32px; border-radius: 7px;
+      background: linear-gradient(135deg, var(--green-light), #b7e4c7);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .item-img-wrap {
+      width: 32px; height: 32px; border-radius: 7px; overflow: hidden;
+      background: var(--gray-100); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .item-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .item-name-cell { display: flex; align-items: center; gap: 8px; }
+    .item-name-text { font-size: 12px; font-weight: 600; color: var(--gray-800); }
+    .item-qty-cell { font-size: 12px; color: var(--gray-600); font-weight: 500; white-space: nowrap; }
+    .item-price-cell { font-size: 12px; font-weight: 700; color: var(--green); text-align: right; white-space: nowrap; }
+    .no-items-msg { font-size: 12px; color: var(--gray-400); font-style: italic; text-align: center; padding: 8px 0; }
+
+    /* ══════════════════════════════════════════
+       ── CUSTOMER COMMENT BLOCK (NEW) ──
+       ══════════════════════════════════════════ */
+    .review-comment-block {
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--gray-200);
+      background: var(--gray-50);
+    }
+    .review-comment-block.positive {
+      border-left-color: var(--green-mid);
+      background: #f4fdf8;
+    }
+    .review-comment-block.negative {
+      border-left-color: var(--red);
+      background: #fff5f5;
+    }
+    .review-comment-block.neutral {
+      border-left-color: var(--gold);
+      background: #fffbf0;
+    }
+    .review-comment-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+    }
+    .review-comment-label {
+      font-size: 10px; font-weight: 700; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: .6px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .sentiment-tag {
+      font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px;
+    }
+    .sentiment-positive { background: #d4edda; color: #155724; }
+    .sentiment-negative { background: #f8d7da; color: #721c24; }
+    .sentiment-neutral  { background: #fff3cd; color: #856404; }
+
+    .review-comment-body {
+      font-size: 13.5px; color: var(--gray-800); line-height: 1.65;
+      position: relative;
+    }
+    .review-quote-mark {
+      font-size: 28px; color: var(--gray-200); line-height: .5;
+      float: left; margin-right: 5px; margin-top: 5px;
+      font-family: Georgia, serif;
+    }
+    .review-comment-text { font-style: italic; }
+
+    .no-comment-msg {
+      font-size: 12px; color: var(--gray-400); font-style: italic;
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 0;
+    }
+
+    /* ── SELLER REPLY SECTION ── */
+    .reply-section { margin-bottom: 10px; }
+
+    .existing-reply {
+      background: var(--blue-light); border: 1px solid #c5d8fb;
+      border-radius: 10px; padding: 10px 12px;
+      display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px;
+    }
+    .reply-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: linear-gradient(135deg, #1a73e8, #4a90e2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: white; flex-shrink: 0; font-weight: 700;
+    }
+    .reply-bubble-content { flex: 1; min-width: 0; }
+    .reply-bubble-header {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;
+    }
+    .reply-from-label { font-size: 11px; font-weight: 700; color: var(--blue); }
+    .reply-badge {
+      font-size: 9px; font-weight: 700; background: var(--blue);
+      color: white; padding: 1px 6px; border-radius: 10px;
+    }
+    .reply-time-label { font-size: 10px; color: var(--gray-400); margin-left: auto; }
+    .reply-bubble-text { font-size: 13px; color: var(--gray-700); line-height: 1.5; }
+    .reply-edit-btn {
+      font-size: 10px; font-weight: 600; color: var(--blue);
+      background: none; border: none; cursor: pointer; padding: 2px 4px;
+      border-radius: 4px; transition: background .15s; margin-top: 4px;
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+    .reply-edit-btn:hover { background: rgba(26,115,232,.1); }
+
+    .reply-input-wrap {
+      display: none; flex-direction: column; gap: 8px;
+      background: #f0f5ff; border: 1.5px solid #c5d8fb;
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+      animation: fadeSlideIn .2s ease;
+    }
+    .reply-input-wrap.open { display: flex; }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .reply-input-label {
+      font-size: 11px; font-weight: 700; color: var(--blue);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .reply-context {
+      font-size: 11px; color: var(--gray-500); font-style: italic;
+      background: var(--white); border-radius: 6px; padding: 6px 8px;
+      border-left: 3px solid var(--gray-200);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .reply-textarea {
+      width: 100%; border: 1.5px solid #c5d8fb; border-radius: 8px;
+      padding: 8px 10px; font-size: 13px; font-family: 'Segoe UI', sans-serif;
+      color: var(--gray-800); resize: none; min-height: 70px;
+      background: var(--white); transition: border-color .15s; outline: none;
+    }
+    .reply-textarea:focus { border-color: var(--blue); }
+    .reply-textarea::placeholder { color: var(--gray-400); }
+    .reply-char-count { font-size: 10px; color: var(--gray-400); text-align: right; margin-top: -4px; }
+    .reply-char-count.warn { color: var(--red); }
+    .reply-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .cancel-reply-btn {
+      font-size: 12px; font-weight: 600; color: var(--gray-600);
+      background: none; border: 1.5px solid var(--gray-200); border-radius: 8px;
+      padding: 6px 14px; cursor: pointer; transition: background .15s;
+    }
+    .cancel-reply-btn:hover { background: var(--gray-100); }
+    .send-reply-btn {
+      font-size: 12px; font-weight: 700; color: white;
+      background: var(--blue); border: none; border-radius: 8px;
+      padding: 6px 16px; cursor: pointer;
+      display: flex; align-items: center; gap: 5px; transition: background .15s;
+    }
+    .send-reply-btn:hover { background: #1558b0; }
+    .send-reply-btn:disabled { background: var(--gray-400); cursor: not-allowed; }
+
+    /* ── Card Footer ── */
+    .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 6px;
+      padding-top: 10px; border-top: 1px solid var(--gray-100);
+    }
+    .delivery-badge {
+      font-size: 11px; font-weight: 600; padding: 4px 10px;
+      border-radius: 20px; background: var(--green-light); color: var(--green);
+    }
+    .delivery-badge.low { background: #fff0f0; color: var(--red); }
+
+    .footer-actions { display: flex; gap: 8px; align-items: center; }
+
+    .reply-btn {
+      font-size: 12px; font-weight: 600; color: var(--blue);
+      background: none; border: 1.5px solid var(--blue);
+      border-radius: 8px; padding: 5px 14px; cursor: pointer;
+      transition: all .15s; display: flex; align-items: center; gap: 5px;
+    }
+    .reply-btn:hover { background: var(--blue); color: var(--white); }
+    .reply-btn.has-reply {
+      color: var(--gray-600); border-color: var(--gray-200);
+      font-size: 11px; padding: 5px 10px;
+    }
+    .reply-btn.has-reply:hover { background: var(--gray-100); color: var(--gray-800); }
+
+    .delete-btn {
+      font-size: 12px; font-weight: 600; color: var(--red);
+      background: none; border: 1.5px solid var(--red);
+      border-radius: 8px; padding: 5px 14px; cursor: pointer;
+      transition: all .15s; display: flex; align-items: center; gap: 5px;
+    }
+    .delete-btn:hover { background: var(--red); color: var(--white); }
+    .delete-btn:active { transform: scale(.97); }
+
+    /* ── Confirm Delete Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.45); z-index: 200;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: var(--white); border-radius: 20px 20px 0 0;
+      padding: 20px 16px 32px; width: 100%; max-width: 480px;
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle { width: 40px; height: 4px; background: var(--gray-200); border-radius: 2px; margin: 0 auto 16px; }
+    .modal-icon {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--red-light); display: flex; align-items: center;
+      justify-content: center; margin: 0 auto 12px; font-size: 24px; color: var(--red);
+    }
+    .modal-title { font-size: 17px; font-weight: 800; color: var(--gray-800); text-align: center; margin-bottom: 6px; }
+    .modal-subtitle { font-size: 13px; color: var(--gray-600); text-align: center; line-height: 1.5; margin-bottom: 20px; }
+    .modal-review-preview {
+      background: var(--gray-50); border-radius: 10px;
+      padding: 10px 12px; font-size: 12px; color: var(--gray-600);
+      font-style: italic; margin-bottom: 20px; text-align: center;
+      border: 1px solid var(--gray-200);
+    }
+    .modal-actions { display: flex; gap: 10px; }
+    .cancel-btn {
+      flex: 1; padding: 12px; border-radius: 10px;
+      border: 1.5px solid var(--gray-200); background: var(--white);
+      color: var(--gray-600); font-weight: 600; font-size: 14px; cursor: pointer;
+    }
+    .cancel-btn:hover { background: var(--gray-100); }
+    .confirm-delete-btn {
+      flex: 2; padding: 12px; border-radius: 10px; border: none;
+      background: var(--red); color: var(--white); font-weight: 700;
+      font-size: 14px; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 6px;
+    }
+    .confirm-delete-btn:hover { background: #c62828; }
+
+    /* ── States ── */
+    .empty-state { text-align: center; padding: 48px 16px; color: var(--gray-400); display: none; }
+    .empty-state i { font-size: 48px; margin-bottom: 12px; color: var(--gray-200); display: block; }
+    .empty-state p { font-size: 14px; }
+    .loading-state { text-align: center; padding: 48px 16px; color: var(--gray-400); }
+    .loading-state i { font-size: 32px; margin-bottom: 8px; color: var(--gray-200); display: block; }
+    .bottom-pad { height: 32px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--gray-800); color: var(--white);
+      padding: 10px 20px; border-radius: 24px;
+      font-size: 13px; font-weight: 600; z-index: 300;
+      transition: transform .3s ease; white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .rating-card.deleting {
+      opacity: 0; transform: translateX(40px);
+      transition: opacity .3s ease, transform .3s ease;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Top Nav ── -->
+<nav class="topnav">
+  <button class="back-btn" onclick="history.back()"><i class="fa fa-arrow-left"></i></button>
+  <span class="nav-title">
+    <i class="fa fa-star" style="color:var(--gold);margin-right:5px;"></i>
+    Ratings & Reviews
+  </span>
+  <button class="mark-all-btn" onclick="markAllRead()">Mark all read</button>
+</nav>
+
+<!-- ── Summary Card ── -->
+<div class="summary-card">
+  <div class="summary-big-star">⭐</div>
+  <div class="summary-info">
+    <div class="summary-score" id="avgScore">—</div>
+    <div class="summary-label">Overall Store Rating</div>
+    <div class="summary-stars" id="summaryStars"></div>
+    <div class="summary-total" id="totalCount">Loading reviews…</div>
+  </div>
+  <div class="summary-breakdown" id="breakdownBars"></div>
+</div>
+
+<!-- ── Filter Tabs ── -->
+<div class="filter-wrap">
+  <button class="filter-chip active" onclick="filterRatings('all',this)">All</button>
+  <button class="filter-chip" onclick="filterRatings('5',this)">⭐ 5 Stars</button>
+  <button class="filter-chip" onclick="filterRatings('4',this)">⭐ 4 Stars</button>
+  <button class="filter-chip" onclick="filterRatings('low',this)">⚠️ Low (1–3)</button>
+</div>
+
+<!-- ── Section Header ── -->
+<div class="section-header">
+  <span class="section-label">Recent Reviews</span>
+  <span class="unread-badge" id="unreadBadge">0 new</span>
+</div>
+
+<!-- ── Ratings List ── -->
+<div class="ratings-list" id="ratingsList">
+  <div class="loading-state">
+    <i class="fa fa-spinner fa-spin"></i>
+    <p>Loading ratings…</p>
+  </div>
+</div>
+<div class="empty-state" id="emptyState">
+  <i class="fa fa-star-half-stroke"></i>
+  <p>No ratings yet.<br>They'll appear here once customers rate their orders.</p>
+</div>
+<div class="bottom-pad"></div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, where, orderBy,
+    onSnapshot, doc, updateDoc, deleteDoc, getDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",
+    authDomain:        "dalocal-8ceb3.firebaseapp.com",
+    projectId:         "dalocal-8ceb3",
+    storageBucket:     "dalocal-8ceb3.appspot.com",
+    messagingSenderId: "737186112999",
+    appId:             "1:737186112999:web:f61d20523f4ac479f8c942"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
+
+  let allRatings    = [];
+  let customerCache = {};
+  let currentFilter = 'all';
+  let deleteTargetId = null;
+  let sellerDisplayName = "Store Owner";
+
+  /* ── Auth Guard ── */
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      const username = localStorage.getItem("currentSeller");
+      if (username) { listenRatings(username); return; }
+    }
+    const saved = localStorage.getItem("currentSeller");
+    if (saved)  { listenRatings(saved); return; }
+    window.location.href = "seller login.html";
+  });
+
+  /* ── Fetch customer data ── */
+  async function fetchCustomer(customerUID) {
+    if (!customerUID) return {};
+    if (customerCache[customerUID]) return customerCache[customerUID];
+    try {
+      const snap = await getDoc(doc(db, "customers", customerUID));
+      const data = snap.exists() ? snap.data() : {};
+      const result = {
+        profilePic: data.profilePic || data.photoURL || null,
+        displayName: data.displayName || data.username || data.name || null
+      };
+      customerCache[customerUID] = result;
+      return result;
+    } catch {
+      customerCache[customerUID] = {};
+      return {};
+    }
+  }
+
+  /* ── Real-time listener ── */
+  function listenRatings(sellerUsername) {
+    getDoc(doc(db, "sellerProfiles", sellerUsername)).then(snap => {
+      if (snap.exists()) {
+        sellerDisplayName = snap.data().storeName || snap.data().displayName || sellerUsername;
+      }
+    }).catch(() => {});
+
+    const q = query(
+      collection(db, "ratings"),
+      where("sellerUsername", "==", sellerUsername),
+      orderBy("ratedAt", "desc")
+    );
+
+    const handleSnap = async (snap) => {
+      allRatings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const uids = [...new Set(allRatings.map(r => r.customerUID).filter(Boolean))];
+      await Promise.all(uids.map(uid => fetchCustomer(uid)));
+      renderAll();
+    };
+
+    onSnapshot(q, handleSnap, err => {
+      console.warn("Ordered query failed, falling back:", err.message);
+      const q2 = query(collection(db, "ratings"), where("sellerUsername", "==", sellerUsername));
+      onSnapshot(q2, async snap2 => {
+        allRatings = snap2.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.ratedAt?.seconds || 0) - (a.ratedAt?.seconds || 0));
+        const uids = [...new Set(allRatings.map(r => r.customerUID).filter(Boolean))];
+        await Promise.all(uids.map(uid => fetchCustomer(uid)));
+        renderAll();
+      });
+    });
+  }
+
+  /* ── Render ── */
+  function renderAll() { renderSummary(); renderList(currentFilter); }
+
+  function renderSummary() {
+    const scores = allRatings.map(r => r.rating || 0);
+    const unread = allRatings.filter(r => !r.readBySeller).length;
+    document.getElementById("unreadBadge").textContent = `${unread} new`;
+
+    if (!scores.length) {
+      document.getElementById("avgScore").textContent   = "—";
+      document.getElementById("totalCount").textContent = "No reviews yet";
+      document.getElementById("summaryStars").innerHTML  = "";
+      document.getElementById("breakdownBars").innerHTML = "";
+      return;
+    }
+
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    document.getElementById("avgScore").textContent   = avg.toFixed(1);
+    document.getElementById("totalCount").textContent =
+      `Based on ${scores.length} review${scores.length !== 1 ? "s" : ""}`;
+
+    const starsEl = document.getElementById("summaryStars");
+    starsEl.innerHTML = "";
+    for (let i = 1; i <= 5; i++) {
+      const s = document.createElement("i");
+      s.className   = "fa fa-star";
+      s.style.color = i <= Math.round(avg) ? "var(--gold)" : "rgba(255,255,255,.3)";
+      starsEl.appendChild(s);
+    }
+
+    const bars = document.getElementById("breakdownBars");
+    bars.innerHTML = "";
+    for (let star = 5; star >= 1; star--) {
+      const cnt = scores.filter(s => s === star).length;
+      const pct = (cnt / scores.length) * 100;
+      bars.innerHTML += `
+        <div class="bar-row">
+          <span class="bar-label">${star}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <span class="bar-count">${cnt}</span>
+        </div>`;
+    }
+  }
+
+  function renderList(filter) {
+    const list  = document.getElementById("ratingsList");
+    const empty = document.getElementById("emptyState");
+    let filtered = [...allRatings];
+    if (filter === "unread")       filtered = filtered.filter(r => !r.readBySeller);
+    else if (filter === "5")       filtered = filtered.filter(r => r.rating === 5);
+    else if (filter === "4")       filtered = filtered.filter(r => r.rating === 4);
+    else if (filter === "low")     filtered = filtered.filter(r => r.rating <= 3);
+    else if (filter === "unreplied")   filtered = filtered.filter(r => r.review && !r.sellerReply);
+    else if (filter === "withcomment") filtered = filtered.filter(r => r.review && r.review.trim().length > 0);
+
+    if (!filtered.length) {
+      list.innerHTML = ""; empty.style.display = "block"; return;
+    }
+    empty.style.display = "none";
+    list.innerHTML = filtered.map(r => buildCard(r)).join("");
+  }
+
+  /* ── Build Order Items Table ── */
+  function buildItemsTable(rawItems) {
+    if (!rawItems || !rawItems.length) {
+      return `<div class="no-items-msg"><i class="fa fa-box-open" style="margin-right:5px;"></i>No item details saved</div>`;
+    }
+    const rows = rawItems.map(it => {
+      if (typeof it === "string") {
+        const match = it.match(/^(.+?)\s*[xX×]\s*(\d+)$/);
+        const name = match ? match[1].trim() : it;
+        const qty  = match ? match[2] : "1";
+        return `
+          <tr>
+            <td><div class="item-name-cell">
+              <div class="item-img-placeholder">🍱</div>
+              <span class="item-name-text">${name}</span>
+            </div></td>
+            <td class="item-qty-cell">×${qty}</td>
+            <td class="item-price-cell">—</td>
+          </tr>`;
+      }
+      const imgTag = it.image
+        ? `<div class="item-img-wrap"><img src="${it.image}" alt="${it.name || ''}" onerror="this.parentElement.innerHTML='🍱'"></div>`
+        : `<div class="item-img-placeholder">🍱</div>`;
+      const qty   = it.qty   ? `×${it.qty}`   : "×1";
+      const price = it.price ? `₱${Number(it.price).toFixed(2)}` : "—";
+      return `
+        <tr>
+          <td><div class="item-name-cell">
+            ${imgTag}
+            <span class="item-name-text">${it.name || "Item"}</span>
+          </div></td>
+          <td class="item-qty-cell">${qty}</td>
+          <td class="item-price-cell">${price}</td>
+        </tr>`;
+    }).join("");
+
+    return `
+      <table class="order-items-table">
+        <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  /* ════════════════════════════════════════════
+     ── BUILD CUSTOMER COMMENT BLOCK (NEW) ──
+     ════════════════════════════════════════════ */
+  function buildCommentBlock(r) {
+    // Determine sentiment class & label based on star rating
+    let sentimentClass = "neutral";
+    let sentimentLabel = "Neutral";
+    let sentimentIcon  = "😐";
+    if (r.rating >= 4) {
+      sentimentClass = "positive";
+      sentimentLabel = "Positive";
+      sentimentIcon  = "😊";
+    } else if (r.rating <= 2) {
+      sentimentClass = "negative";
+      sentimentLabel = "Needs Attention";
+      sentimentIcon  = "⚠️";
+    }
+
+    // Check for review text (support both "review" and "comment" fields from db.js)
+    const reviewText = r.review || r.comment || r.ratingComment || "";
+
+    if (!reviewText || !reviewText.trim()) {
+      return `
+        <div class="review-comment-block">
+          <div class="review-comment-header">
+            <span class="review-comment-label">
+              <i class="fa fa-comment" style="font-size:9px"></i> Customer's Comment
+            </span>
+          </div>
+          <div class="no-comment-msg">
+            <i class="fa fa-comment-slash" style="font-size:13px;color:var(--gray-300)"></i>
+            No written comment left by customer.
+          </div>
+        </div>`;
+    }
+
+    return `
+      <div class="review-comment-block ${sentimentClass}">
+        <div class="review-comment-header">
+          <span class="review-comment-label">
+            <i class="fa fa-comment" style="font-size:9px"></i> Customer's Comment
+          </span>
+          <span class="sentiment-tag sentiment-${sentimentClass}">${sentimentIcon} ${sentimentLabel}</span>
+        </div>
+        <div class="review-comment-body">
+          <span class="review-quote-mark">"</span>
+          <span class="review-comment-text">${escapeHTML(reviewText)}</span>
+        </div>
+      </div>`;
+  }
+
+  /* ── Build Seller Reply Section ── */
+  function buildReplySection(r) {
+    const reviewText    = r.review || r.comment || r.ratingComment || "";
+    const reviewSnippet = reviewText.slice(0, 60) + (reviewText.length > 60 ? "…" : "");
+    const replyContextHTML = reviewText
+      ? `<div class="reply-context" id="rctx-${r.id}">"${reviewSnippet}"</div>`
+      : "";
+
+    const existingReplyHTML = r.sellerReply ? `
+      <div class="existing-reply" id="existingreply-${r.id}">
+        <div class="reply-avatar"><i class="fa fa-store" style="font-size:11px"></i></div>
+        <div class="reply-bubble-content">
+          <div class="reply-bubble-header">
+            <span class="reply-from-label">Your Reply</span>
+            <span class="reply-badge">Seller</span>
+            <span class="reply-time-label">${r.sellerReplyAt?.toDate ? timeAgo(r.sellerReplyAt.toDate()) : ""}</span>
+          </div>
+          <div class="reply-bubble-text" id="replytext-${r.id}">${escapeHTML(r.sellerReply)}</div>
+          <button class="reply-edit-btn" onclick="event.stopPropagation(); openReplyBox('${r.id}', true)">
+            <i class="fa fa-pen"></i> Edit reply
+          </button>
+        </div>
+      </div>` : "";
+
+    const inputHTML = `
+      <div class="reply-input-wrap" id="replybox-${r.id}">
+        <div class="reply-input-label">
+          <i class="fa fa-reply" style="font-size:10px"></i>
+          ${r.sellerReply ? "Edit your reply" : "Reply to this review"}
+        </div>
+        ${replyContextHTML}
+        <textarea class="reply-textarea" id="replyta-${r.id}"
+          placeholder="Write a professional reply… Thank the customer, address concerns, or invite them back 😊"
+          maxlength="500"
+          oninput="updateCharCount('${r.id}')"
+          onclick="event.stopPropagation()"
+        >${r.sellerReply ? escapeHTML(r.sellerReply) : ""}</textarea>
+        <div class="reply-char-count" id="replycc-${r.id}">0 / 500</div>
+        <div class="reply-actions">
+          <button class="cancel-reply-btn" onclick="event.stopPropagation(); closeReplyBox('${r.id}')">Cancel</button>
+          <button class="send-reply-btn" id="replysend-${r.id}" onclick="event.stopPropagation(); submitReply('${r.id}')">
+            <i class="fa fa-paper-plane"></i> ${r.sellerReply ? "Update" : "Send Reply"}
+          </button>
+        </div>
+      </div>`;
+
+    return `<div class="reply-section" id="replysec-${r.id}">${existingReplyHTML}${inputHTML}</div>`;
+  }
+
+  /* ── Build Card ── */
+  function buildCard(r) {
+    const cust     = customerCache[r.customerUID] || {};
+    const pic      = cust.profilePic || null;
+    const name     = r.customerName || r.customerUsername || cust.displayName || "Customer";
+    const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+    const unread   = !r.readBySeller;
+
+    const avatarHTML = pic
+      ? `<img class="customer-avatar" src="${pic}" alt="${name}"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+         <div class="avatar-initials" style="display:none">${initials}</div>`
+      : `<div class="avatar-initials">${initials}</div>`;
+
+    const starsHTML = [1,2,3,4,5]
+      .map(i => `<i class="fa fa-star star ${i <= r.rating ? "filled" : ""}"></i>`)
+      .join("");
+
+    const rawItems = r.items || [];
+    const pillsHTML = rawItems.length
+      ? `<div class="ordered-preview">
+           ${rawItems.slice(0, 4).map(it => {
+               const label = typeof it === "string"
+                 ? it.replace(/\s*[xX×]\s*\d+$/, "").trim()
+                 : (it.name || "Item");
+               const qty = typeof it === "string"
+                 ? (it.match(/[xX×]\s*(\d+)$/) || [])[1]
+                 : it.qty;
+               return `<span class="ordered-pill">
+                 <i class="fa fa-circle-dot"></i>${label}${qty ? ` ×${qty}` : ""}
+               </span>`;
+             }).join("")}
+           ${rawItems.length > 4 ? `<span class="ordered-pill" style="background:var(--gray-100);color:var(--gray-600);">+${rawItems.length - 4} more</span>` : ""}
+         </div>`
+      : "";
+
+    const orderId  = r.orderId || r.id.slice(0, 8).toUpperCase();
+  // Product preview (mula sa saveRating fields)
+const productName  = r.productName  || r.name  || "";
+const productImage = r.productImage || r.image || "";
+const productSize  = r.size  ? `Size: ${r.size}` : "";
+const productQty   = r.qty   ? `×${r.qty}`        : "";
+const productPrice = r.price ? `₱${r.price}`      : "";
+
+const productPreviewHTML = productName ? `
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--green-light);border-radius:10px;margin-bottom:10px;border:1px solid #b7e4c7;">
+    ${productImage
+      ? `<img src="${productImage}" alt="${escapeHTML(productName)}"
+             style="width:52px;height:52px;border-radius:8px;object-fit:cover;border:1px solid #b7e4c7;flex-shrink:0;"
+             onerror="this.style.display='none'">`
+      : `<div style="width:52px;height:52px;border-radius:8px;background:#b7e4c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+           <i class="fa fa-box" style="color:var(--green);font-size:18px;"></i>
+         </div>`}
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:700;color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(productName)}</div>
+      <div style="font-size:11px;color:#3a7a50;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;">
+        ${productSize  ? `<span>${productSize}</span>`  : ""}
+        ${productQty   ? `<span>${productQty}</span>`   : ""}
+        ${productPrice ? `<span style="font-weight:700;">${productPrice}</span>` : ""}
+      </div>
+      <div style="font-size:10px;color:#6aaa82;margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">
+        <i class="fa fa-tag" style="font-size:9px;"></i> Rated Product
+      </div>
+    </div>
+  </div>` : "";
+
+const orderBox = `
+      <div class="order-box">
+        <div class="order-box-header">
+          <div class="order-box-label">
+            <i class="fa fa-bag-shopping" style="font-size:10px"></i> Items Ordered
+          </div>
+          <span class="order-id-badge">Order #${orderId}</span>
+        </div>
+        ${productPreviewHTML}
+        ${buildItemsTable(rawItems)}
+      </div>`;
+
+    /* ── Comment block + Reply section ── */
+    const commentBlock = buildCommentBlock(r);
+    const reviewText   = r.review || r.comment || r.ratingComment || "";
+    const replySection = buildReplySection(r);
+
+    const timeStr = r.ratedAt?.toDate
+      ? timeAgo(r.ratedAt.toDate())
+      : (r.createdAt?.toDate ? timeAgo(r.createdAt.toDate()) : "Just now");
+
+    const reviewPreview = (reviewText).replace(/'/g, "\\'").slice(0, 80);
+    const replyBtnHTML = `
+      <button class="reply-btn ${r.sellerReply ? "has-reply" : ""}"
+        onclick="event.stopPropagation(); openReplyBox('${r.id}')">
+        <i class="fa fa-reply"></i>
+        ${r.sellerReply ? "Replied" : "Reply"}
+      </button>`;
+
+    const footer = `
+      <div class="footer-actions">
+        ${replyBtnHTML}
+        </button>
+      </div>`;
+
+    const badge = r.rating >= 4
+      ? `<span class="delivery-badge">✓ Completed</span>`
+      : `<span class="delivery-badge low">⚠ Needs Attention</span>`;
+
+    return `
+      <div class="rating-card ${unread ? "unread" : ""}"
+           id="card-${r.id}" onclick="markRead('${r.id}')">
+        <div class="card-header">
+          ${avatarHTML}
+          <div class="card-meta">
+            <div class="customer-name-row">
+              <span class="customer-name">${escapeHTML(name)}</span>
+              ${unread ? '<span class="new-dot"></span>' : ""}
+            </div>
+            <div class="card-time">${timeStr}</div>
+            ${pillsHTML}
+          </div>
+          <div class="stars-inline">
+            ${starsHTML}
+            <span class="rating-num">${r.rating}.0</span>
+          </div>
+        </div>
+
+        ${orderBox}
+        ${commentBlock}
+        ${replySection}
+
+        <div class="card-footer">${badge}${footer}</div>
+      </div>`;
+  }
+
+  /* ── Reply Box Controls ── */
+  window.openReplyBox = function(ratingId, isEdit = false) {
+    const box = document.getElementById(`replybox-${ratingId}`);
+    if (!box) return;
+    box.classList.add("open");
+    const ta = document.getElementById(`replyta-${ratingId}`);
+    if (ta) {
+      ta.focus();
+      updateCharCount(ratingId);
+      const len = ta.value.length;
+      ta.setSelectionRange(len, len);
+    }
+    box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  window.closeReplyBox = function(ratingId) {
+    const box = document.getElementById(`replybox-${ratingId}`);
+    if (box) box.classList.remove("open");
+  };
+
+  window.updateCharCount = function(ratingId) {
+    const ta = document.getElementById(`replyta-${ratingId}`);
+    const cc = document.getElementById(`replycc-${ratingId}`);
+    if (!ta || !cc) return;
+    const len = ta.value.length;
+    cc.textContent = `${len} / 500`;
+    cc.classList.toggle("warn", len > 450);
+  };
+
+  /* ── Submit Reply to Firestore ── */
+  window.submitReply = async function(ratingId) {
+    const ta  = document.getElementById(`replyta-${ratingId}`);
+    const btn = document.getElementById(`replysend-${ratingId}`);
+    if (!ta) return;
+    const text = ta.value.trim();
+    if (!text) { showToast("Please write a reply first."); ta.focus(); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Sending…`;
+
+    try {
+      await updateDoc(doc(db, "ratings", ratingId), {
+        sellerReply:   text,
+        sellerReplyAt: serverTimestamp()
+      });
+      showToast("Reply sent ✓");
+      closeReplyBox(ratingId);
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to send reply. Try again.");
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa fa-paper-plane"></i> Send Reply`;
+    }
+  };
+
+  /* ── Mark Read ── */
+  window.markRead = async function(ratingId) {
+    const r = allRatings.find(x => x.id === ratingId);
+    if (!r || r.readBySeller) return;
+    await updateDoc(doc(db, "ratings", ratingId), { readBySeller: true });
+  };
+
+  window.markAllRead = async function() {
+    const unread = allRatings.filter(r => !r.readBySeller);
+    if (!unread.length) { showToast("Nothing new to mark."); return; }
+    await Promise.all(unread.map(r =>
+      updateDoc(doc(db, "ratings", r.id), { readBySeller: true })
+    ));
+    showToast("All marked as read ✓");
+  };
+
+  /* ── Filter ── */
+  window.filterRatings = function(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+    btn.classList.add("active");
+    renderList(filter);
+  };
+
+  /* ── Helpers ── */
+  function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+              .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
+  }
+  window.showToast = showToast;
+
+  function timeAgo(date) {
+    const diff = (Date.now() - date.getTime()) / 1000;
+    if (diff < 60)    return "just now";
+    if (diff < 3600)  return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+    return `${Math.floor(diff/86400)}d ago`;
+  }
+</script>
+</body>
+</html>

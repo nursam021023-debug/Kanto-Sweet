@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat with Rider</title>
+<link rel="stylesheet" href="messages.css">
+<style>
+    /* This page has no sidebar — always show the chat area full-width */
+    .main { display: flex; }
+    .sidebar { display: none; }
+    .chat-area { display: flex; width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+    <div class="top-bar">
+        <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+        <h2>Messages</h2>
+        <span id="customer-label"></span>
+    </div>
+
+    <div class="main" id="main">
+        <div class="chat-area" id="chat-area">
+            <div class="no-chat">Loading conversation…</div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+    getFirestore, doc, getDoc, collection, query, orderBy,
+    onSnapshot, addDoc, updateDoc, serverTimestamp, increment
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",
+    authDomain: "dalocal-8ceb3.firebaseapp.com",
+    projectId: "dalocal-8ceb3",
+    storageBucket: "dalocal-8ceb3.appspot.com",
+    messagingSenderId: "737186112999",
+    appId: "1:737186112999:web:f61d20523f4ac479f8c942"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+const currentCustomer = localStorage.getItem("currentCustomer");
+const currentUID      = localStorage.getItem("currentCustomerUID") || "";
+
+const params = new URLSearchParams(window.location.search);
+const chatId = params.get("chat");
+
+if (!currentCustomer || !currentUID) {
+    alert("Please login first.");
+    window.location.href = "login.html";
+    throw new Error("stop");
+}
+if (!chatId) {
+    alert("No conversation selected.");
+    window.location.href = "to-receive.html";
+    throw new Error("stop");
+}
+
+document.getElementById("customer-label").innerText = currentCustomer;
+
+function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.innerText = str || "";
+    return d.innerHTML;
+}
+
+function initials(name) {
+    return (name || "?").trim().charAt(0).toUpperCase();
+}
+
+function formatTime(ts) {
+    if (!ts || !ts.seconds) return "";
+    const d = new Date(ts.seconds * 1000);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    return sameDay
+        ? d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" })
+        : d.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+}
+
+let _chatDoc  = null;  // live copy of chats/{chatId} (for name/order/unreadRider)
+let _msgs     = [];
+let _riderInfoCache = {}; // riderUID -> { profilePic, phone } (or null fields if missing)
+
+// ── Fetch + cache the rider's profile pic + phone number (riders/{uid}) ────
+async function fetchRiderInfo(uid) {
+    if (!uid) return { profilePic: null, phone: null };
+    if (_riderInfoCache[uid] !== undefined) return _riderInfoCache[uid];
+    try {
+        const snap = await getDoc(doc(db, "riders", uid));
+        const data = snap.exists() ? snap.data() : {};
+        const info = {
+            profilePic: data.profilePic || null,
+            // Support a couple of possible field names in case the rider
+            // profile was saved with a different key.
+            phone: data.phone || data.phoneNumber || data.contactNumber || null
+        };
+        _riderInfoCache[uid] = info;
+        return info;
+    } catch (e) {
+        const info = { profilePic: null, phone: null };
+        _riderInfoCache[uid] = info;
+        return info;
+    }
+}
+
+// ── Build the chat shell (header + messages + input) once ──────────────────
+document.getElementById("chat-area").innerHTML = `
+    <div class="chat-header">
+        <div class="avatar av-seller" id="chatAvatar" style="width:28px;height:28px;">R</div>
+        <div>
+            <div class="chat-header-name" id="chatHeaderName">Rider</div>
+            <div class="chat-header-status" id="chatHeaderOrder"></div>
+        </div>
+    </div>
+    <div class="messages" id="msg-list"><div style="text-align:center;padding:20px;opacity:.5">Loading…</div></div>
+    <div class="input-area">
+        <textarea class="msg-input" id="msg-input" placeholder="Type a message..." onkeydown="handleKeyProxy(event)"></textarea>
+        <button class="send-btn" id="send-btn">Send</button>
+    </div>
+`;
+document.getElementById("send-btn").onclick = sendMsg;
+
+// ── Live subscribe to the parent chat doc (name/order/unreadRider) ─────────
+onSnapshot(doc(db, "chats", chatId), async (snap) => {
+    if (!snap.exists()) return;
+    _chatDoc = snap.data();
+    document.getElementById("chatHeaderName").innerText  = _chatDoc.riderUsername || "Rider";
+
+    const avatarEl = document.getElementById("chatAvatar");
+    const info = await fetchRiderInfo(_chatDoc.riderUID);
+
+    if (info.profilePic) {
+        avatarEl.style.overflow = "hidden";
+        avatarEl.style.padding = "0";
+        avatarEl.innerHTML = `<img src="${info.profilePic}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    } else {
+        avatarEl.innerText = initials(_chatDoc.riderUsername);
+    }
+
+    // Show the rider's phone number under their name instead of the order name.
+    document.getElementById("chatHeaderOrder").innerText = info.phone
+        ? "📞 " + info.phone
+        : "Rider";
+
+    renderMessages(); // refresh "Seen" state now that unreadRider may have changed
+}, (e) => console.error("Failed to load chat info:", e));
+
+// ── Mark this thread as read for the customer as soon as it's opened ───────
+// This is what clears the "unreadCustomer" badge back on to-receive.html —
+// mirrors what rider-message.html does with "unreadRider".
+updateDoc(doc(db, "chats", chatId), { unreadCustomer: 0 })
+    .catch(e => console.error("Failed to clear unread count:", e));
+
+// ── Subscribe to messages ───────────────────────────────────────────────────
+const msgsQuery = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
+onSnapshot(msgsQuery, (snap) => {
+    _msgs = snap.docs.map(d => d.data());
+    renderMessages();
+}, (err) => {
+    console.error("Failed to load messages:", err);
+    document.getElementById("msg-list").innerHTML = `<div style="text-align:center;padding:20px;opacity:.5">Could not load conversation.</div>`;
+});
+
+function renderMessages() {
+    const list = document.getElementById("msg-list");
+    if (!list) return;
+
+    if (_msgs.length === 0) {
+        list.innerHTML = "<div style='text-align:center;padding:20px;opacity:.5'>No messages yet. Say hi to your rider! 👋</div>";
+        return;
+    }
+
+    // Find the last message sent by the customer, to show "Seen" underneath
+    // it once the rider's unread counter for this chat has gone back to 0.
+    const lastMineIdx = _msgs.reduce((lastIdx, m, i) => m.senderUID === currentUID ? i : lastIdx, -1);
+    const riderHasSeenLatest = !!_chatDoc && (_chatDoc.unreadRider || 0) === 0;
+
+    list.innerHTML = _msgs.map((m, i) => {
+        const isMine = m.senderUID === currentUID;
+        const time = formatTime(m.createdAt);
+        const showSeen = isMine && i === lastMineIdx && riderHasSeenLatest;
+        return `
+        <div class="msg ${isMine ? 'sent' : 'received'}">
+            <div>${escapeHtml(m.text)}</div>
+            <div class="msg-time">${time}</div>
+            ${showSeen ? `<div class="msg-seen">Seen ✓</div>` : ""}
+        </div>`;
+    }).join("");
+    list.scrollTop = list.scrollHeight;
+}
+
+// ── Send a message ───────────────────────────────────────────────────────────
+async function sendMsg() {
+    const input = document.getElementById("msg-input");
+    if (!input || !input.value.trim()) return;
+    const text = input.value.trim();
+    input.value = "";
+    input.disabled = true;
+
+    try {
+        await addDoc(collection(db, "chats", chatId, "messages"), {
+            senderUID: currentUID,
+            senderRole: "customer",
+            text,
+            createdAt: serverTimestamp()
+        });
+        await updateDoc(doc(db, "chats", chatId), {
+            lastMessage: text,
+            updatedAt: serverTimestamp(),
+            // Bumps the rider's unread counter — read by rider-message.html
+            // as "unreadRider" and cleared to 0 there when the rider opens
+            // this same chat thread.
+            unreadRider: increment(1)
+        });
+    } catch (e) {
+        console.error("Failed to send message:", e);
+        input.value = text;
+    }
+
+    input.disabled = false;
+    input.focus();
+}
+
+window.handleKeyProxy = function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMsg();
+    }
+};
+
+window.goBack = function () { window.location.href = "to-receive.html"; };
+</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seller Stores</title>
+<link rel="stylesheet" href="seller.css">
+<style>
+    .search-wrap {
+        display: flex;
+        justify-content: center;
+        margin: 16px auto 24px;
+        max-width: 480px;
+        padding: 0 16px;
+    }
+    .search-wrap input {
+        width: 100%;
+        padding: 10px 16px;
+        font-size: 14px;
+        border: 1.5px solid #ccc;
+        border-radius: 99px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .search-wrap input:focus { border-color: #888; }
+    .no-results {
+        text-align: center;
+        color: #888;
+        font-size: 14px;
+        margin-top: 24px;
+    }
+    .product-match {
+        font-size: 12px;
+        color: #155724;
+        background-color: #d4edda;
+        border-radius: 99px;
+        padding: 2px 10px;
+        display: inline-block;
+        margin-top: 4px;
+    }
+    .loading-msg {
+        text-align: center;
+        color: #888;
+        font-size: 14px;
+        margin-top: 32px;
+        padding: 20px;
+    }
+</style>
+</head>
+<body>
+
+<h2>SELLER STORES</h2>
+
+<div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="Search shops or products..." oninput="filterStores()">
+</div>
+
+<div class="store-list" id="storeList">
+    <p class="loading-msg">Loading stores...</p>
+</div>
+<p class="no-results" id="noResults" style="display:none;">No shops or products found.</p>
+
+<button class="back-btn" onclick="goBack()">Back</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBaDezXv4aynvYTJaaZyXwIRIImLBEYwB0",
+    authDomain: "dalocal-8ceb3.firebaseapp.com",
+    projectId: "dalocal-8ceb3",
+    storageBucket: "dalocal-8ceb3.appspot.com",
+    messagingSenderId: "737186112999",
+    appId: "1:737186112999:web:f61d20523f4ac479f8c942"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+const storeList = document.getElementById("storeList");
+const noResults = document.getElementById("noResults");
+
+let allStores   = [];
+let allProducts = [];
+
+// Load stores + sellers (for profile pics) + products from Firestore
+(async () => {
+    try {
+        // Load stores
+        const storeSnap = await getDocs(collection(db, "stores"));
+        const sellerSnap = await getDocs(collection(db, "sellers"));
+        const productSnap = await getDocs(collection(db, "products"));
+
+        // Build a map of seller username -> profilePic
+        const sellerPicMap = {};
+        sellerSnap.forEach(d => {
+            const data = d.data();
+            if (data.username) sellerPicMap[data.username] = data.profilePic || "";
+        });
+
+        allProducts = productSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        allStores = storeSnap.docs.map(d => {
+            const data = d.data();
+            // Use seller's profilePic as store photo if not set
+            const photo = data.photo || sellerPicMap[data.seller] || "";
+            return { ...data, photo };
+        }).filter(s => s.name && s.seller); // only valid stores
+
+        // Stores and products loaded from Firestore — no localStorage sync needed
+
+        if (allStores.length === 0) {
+            storeList.innerHTML = "<p class='empty'>No stores available yet.</p>";
+        } else {
+            renderStores(allStores, "");
+        }
+    } catch (err) {
+        console.error("Failed to load from Firestore:", err);
+        storeList.innerHTML = "<p class='empty'>Could not load stores. Please check your connection.</p>";
+    }
+})();
+
+function renderStores(filteredStores, searchQuery) {
+    storeList.innerHTML = "";
+
+    if (filteredStores.length === 0) {
+        noResults.style.display = "block";
+        return;
+    }
+    noResults.style.display = "none";
+
+    filteredStores.forEach(store => {
+        const sellerUsername = store.seller || store.name;
+
+        const matchingProducts = searchQuery
+            ? allProducts.filter(p =>
+                p.seller === sellerUsername &&
+                p.name.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+            : [];
+
+        const matchBadge = matchingProducts.length > 0
+            ? `<span class="product-match">Has "${searchQuery}" (${matchingProducts.length} product${matchingProducts.length > 1 ? 's' : ''})</span>`
+            : "";
+
+        const card = document.createElement("div");
+        card.className = "store-card";
+        card.onclick = function() {
+            localStorage.setItem("selectedStore", store.name);
+            localStorage.setItem("selectedSeller", sellerUsername);
+            window.location.href = "shop.html";
+        };
+        card.innerHTML = `
+            <div class="store-img-wrap">
+                <img src="${store.photo || ''}" alt="${store.name}" onerror="this.style.display='none'">
+                <div class="store-overlay"><span>Visit Store</span></div>
+            </div>
+            <div class="store-info">
+                <h3>${store.name}</h3>
+                <p>${store.location || "Local Store"}</p>
+                ${matchBadge}
+            </div>
+        `;
+        storeList.appendChild(card);
+    });
+}
+
+window.filterStores = function() {
+    const q = document.getElementById("searchInput").value.trim();
+    if (!q) { renderStores(allStores, ""); return; }
+    const ql = q.toLowerCase();
+    const filtered = allStores.filter(store => {
+        const sellerUsername = store.seller || store.name;
+        const storeMatch = store.name.toLowerCase().includes(ql) ||
+                           (store.location && store.location.toLowerCase().includes(ql));
+        const productMatch = allProducts.some(p =>
+            p.seller === sellerUsername && p.name.toLowerCase().includes(ql)
+        );
+        return storeMatch || productMatch;
+    });
+    renderStores(filtered, q);
+};
+
+window.goBack = function() { window.location.href = "foruzer.html"; };
+</script>
+
+</body>
+</html>

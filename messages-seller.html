@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages - Seller</title>
+<link rel="stylesheet" href="messages.css">
+</head>
+<body>
+ 
+<div class="app">
+ 
+    <!-- HEADER -->
+    <div class="top-bar">
+        <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+        <h2>Messages</h2>
+        <span id="seller-label"></span>
+    </div>
+ 
+    <div class="main" id="main">
+ 
+        <!-- SIDEBAR: conversation list -->
+        <div class="sidebar">
+            <div class="sidebar-header">Conversations</div>
+            <div id="contact-list"><div class="empty-sidebar">Loading...</div></div>
+        </div>
+ 
+        <!-- CHAT AREA -->
+        <div class="chat-area" id="chat-area">
+            <div class="no-chat">Select a conversation to start</div>
+        </div>
+ 
+    </div>
+</div>
+ 
+<!-- REPLACE the <script type="module"> block in messages-seller.html -->
+<script type="module">
+
+import {
+    getMessages,
+    sendMessage,
+    getThreadsForSeller,
+    markMessagesRead
+} from "./db.js";
+
+const currentSeller = localStorage.getItem("currentSeller");
+if (!currentSeller) {
+    alert("Please login first.");
+    window.location.href = "seller login.html";
+}
+
+document.getElementById("seller-label").innerText = currentSeller;
+
+let activeCustomer = null;
+let threadMap      = {};
+
+async function init() {
+    await refreshThreads();
+    renderSidebar();
+}
+
+async function refreshThreads() {
+    const threads = await getThreadsForSeller(currentSeller);
+    threadMap = {};
+    threads.forEach(t => {
+        const msgs = t.messages.sort((a, b) => (a.sentAt?.seconds || 0) - (b.sentAt?.seconds || 0));
+        const last   = msgs[msgs.length - 1];
+        // Only count messages FROM customer that are unread
+        const unread = msgs.filter(m => m.sender === "customer" && m.read === false).length;
+        threadMap[t.customerUsername] = { last, unread, msgs };
+    });
+}
+
+function renderSidebar() {
+    const list = document.getElementById("contact-list");
+    list.innerHTML = "";
+    const customers = Object.keys(threadMap);
+
+    if (customers.length === 0) {
+        list.innerHTML = "<div class='empty-sidebar'>No messages yet</div>";
+        return;
+    }
+
+    customers.forEach(customer => {
+        const info   = threadMap[customer];
+        const last   = info.last;
+        const unread = info.unread || 0;
+
+        const div = document.createElement("div");
+        div.className = "contact" + (activeCustomer === customer ? " active" : "");
+        div.innerHTML = `
+            <div class="avatar av-customer">${customer.substring(0,2).toUpperCase()}</div>
+            <div class="contact-info">
+                <div class="contact-name">${customer}</div>
+                <div class="contact-preview">${last ? last.text.substring(0,30) : ""}</div>
+            </div>
+            ${unread ? `<span class="unread">${unread}</span>` : ""}
+        `;
+        div.onclick = () => openChat(customer);
+        list.appendChild(div);
+    });
+}
+
+async function openChat(customer) {
+    activeCustomer = customer;
+    renderSidebar();
+    document.getElementById("main").classList.add("chat-open");
+
+    const chatArea = document.getElementById("chat-area");
+    chatArea.innerHTML = `
+        <div class="chat-header">
+            <button class="chat-back-btn" onclick="closeChatProxy()" title="Back to conversations">&#8592;</button>
+            <div class="avatar av-customer" style="width:28px;height:28px;font-size:11px">${customer.substring(0,2).toUpperCase()}</div>
+            <div>
+                <div class="chat-header-name">${customer}</div>
+                <div class="chat-header-status">Customer</div>
+            </div>
+        </div>
+        <div class="messages" id="msg-list"><div style="text-align:center;padding:20px;opacity:.5">Loading…</div></div>
+        <div class="input-area">
+            <textarea class="msg-input" id="msg-input" placeholder="Type a message..." onkeydown="handleKeyProxy(event)"></textarea>
+            <button class="send-btn" id="send-btn">Send</button>
+        </div>
+    `;
+
+    document.getElementById("send-btn").onclick = sendMsg;
+
+    // Mark customer's messages as read (seller is reading)
+    const threadId = [customer, currentSeller].sort().join("__");
+    await markMessagesRead(threadId, "seller");
+
+    await refreshThreads();
+    renderSidebar();
+    await renderMessages();
+}
+
+async function renderMessages() {
+    const list = document.getElementById("msg-list");
+    if (!list || !activeCustomer) return;
+
+    const msgs = await getMessages(activeCustomer, currentSeller);
+    list.innerHTML = "";
+
+    if (msgs.length === 0) {
+        list.innerHTML = "<div style='text-align:center;padding:20px;opacity:.5'>No messages yet.</div>";
+        return;
+    }
+
+    // Find the last message sent by the seller
+    const lastSellerMsgIndex = msgs.reduce((lastIdx, m, i) => m.sender === "seller" ? i : lastIdx, -1);
+
+    msgs.forEach((m, i) => {
+        const isSent = m.sender === "seller";
+        const div = document.createElement("div");
+        div.className = "msg " + (isSent ? "sent" : "received");
+        const time = m.sentAt?.seconds
+            ? formatTime(new Date(m.sentAt.seconds * 1000))
+            : "";
+
+        // Show "Seen" only under the last sent message if it has been read
+        const showSeen = isSent && i === lastSellerMsgIndex && m.read === true;
+
+        div.innerHTML = `
+            <div>${m.text}</div>
+            <div class="msg-time">${time}</div>
+            ${showSeen ? `<div class="msg-seen">Seen ✓</div>` : ""}
+        `;
+        list.appendChild(div);
+    });
+    list.scrollTop = list.scrollHeight;
+}
+
+async function sendMsg() {
+    const input = document.getElementById("msg-input");
+    if (!input || !input.value.trim() || !activeCustomer) return;
+    const text = input.value.trim();
+    input.value = "";
+    input.disabled = true;
+
+    await sendMessage(activeCustomer, currentSeller, "seller", text);
+
+    input.disabled = false;
+    input.focus();
+    await refreshThreads();
+    renderSidebar();
+    await renderMessages();
+}
+
+window.handleKeyProxy = function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMsg();
+    }
+};
+
+window.closeChatProxy = function() {
+    activeCustomer = null;
+    document.getElementById("main").classList.remove("chat-open");
+    document.getElementById("chat-area").innerHTML = `<div class="no-chat">Select a conversation to start</div>`;
+    renderSidebar();
+};
+
+function formatTime(date) {
+    let h = date.getHours(), m = date.getMinutes(), ap = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return h + ":" + (m < 10 ? "0" + m : m) + " " + ap;
+}
+
+window.goBack = function() {
+    window.location.href = "homeseller.html";
+};
+
+setInterval(async () => {
+    await refreshThreads();
+    renderSidebar();
+    if (activeCustomer) await renderMessages();
+}, 5000);
+
+init();
+
+</script>
+</body>
+</html>

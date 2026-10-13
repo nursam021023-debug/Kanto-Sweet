@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KANTO SWEETS</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="user.css">
+    <link rel="stylesheet" href="seller.css">
+    <link rel="stylesheet" href="shop.css">
+
+<link rel="stylesheet" href="index.css">
+
+<!-- ═══════ OVERRIDES: mas malaking fonts/buttons + full-width (walang space sa gilid) ═══════ -->
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
+}
+
+.app-view,
+.home, .about,
+.menu-section, .banner,
+.shop-info-card, .shop-location-card,
+.reviews-section, #shopCarouselSection,
+.search-wrap, .store-list {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.menu-section, .shop-info-card, .shop-location-card,
+.reviews-section, .search-wrap, .store-list, .about {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+}
+
+.banner, .shop-info-card, .shop-location-card,
+.reviews-section, .modal-sheet { border-radius: 0 !important; }
+
+/* FONTS */
+/* (inalis na ang global html/body font-size para hindi lumaki ang K.S, header, atbp.) */
+.hero-title { font-size: clamp(3.2rem, 7vw, 6rem) !important; }
+.hero-welcome { font-size: clamp(2.1rem, 4.6vw, 3.8rem) !important; }
+.hero-logo { width: auto !important; height: auto !important; }
+.hero-logo img {
+    width: clamp(230px, 28vw, 400px) !important;
+    max-width: 100% !important;
+    height: auto !important;
+}
+h2 { font-size: 1.9rem !important; }
+h3 { font-size: 1.45rem !important; }
+.heading { font-size: 2.9rem !important; }
+.description, p, label:not(.fas), select, textarea,
+input:not(#searchInput) { font-size: 1.18rem !important; }
+.navbar a { font-size: 1.3rem !important; }
+.banner-info h1 { font-size: 2.1rem !important; }
+.banner-info p { font-size: 1.18rem !important; }
+.reviews-avg-score { font-size: 2.9rem !important; }
+
+/* BUTTONS */
+button:not(#loginBtn):not(#headerBackBtn):not(#modalBackBtn):not(#modalActionBtn),
+.btn, .stock-alert-btn {
+    font-size: 1.2rem !important;
+    padding: 12px 22px !important;
+    min-height: 48px;
+}
+
+html body #view-home #home .content #shopNowBtn.browse-btn.btn {
+    font-size: 2.4rem !important;
+    line-height: 1.1 !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px;
+    padding: 16px 40px !important;
+    min-height: 60px !important;
+    min-width: 160px !important;
+    border-radius: 100px !important;
+    -webkit-text-stroke: 0.5px currentColor;
+}
+
+.qty-btn { width: 48px !important; height: 48px !important; font-size: 1.4rem !important; }
+.qty-num { height: 48px !important; font-size: 1.2rem !important; }
+.size-btn { font-size: 1.05rem !important; padding: 10px 18px !important; }
+.rev-chip { font-size: 1rem !important; padding: 10px 16px !important; }
+.modal-close { font-size: 1.4rem !important; width: 44px; height: 44px; }
+
+/* HEADER BACK BUTTON — medyo mas malaki */
+html body header .header-left-group #headerBackBtn.header-back-btn {
+    font-size: 1.15rem !important;
+    padding: 9px 18px !important;
+    min-height: 44px !important;
+    gap: 8px;
+}
+html body header .header-left-group #headerBackBtn.header-back-btn i,
+html body header .header-left-group #headerBackBtn.header-back-btn span {
+    font-size: 1.15rem !important;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SHARED HEADER (all views) ═══════════════════════════ -->
+<header>
+    <input type="checkbox" id="toggler">
+
+    <div class="header-left-group">
+        <button type="button" class="header-back-btn" id="headerBackBtn" title="Back">
+            <i class="fas fa-arrow-left"></i><span>Back</span>
+        </button>
+        <a href="#" class="logo">K.S<span>.</span></a>
+    </div>
+
+    <nav class="navbar">
+        <a href="#" id="navHome">home</a>
+        <a href="#" id="navAbout">about</a>
+    </nav>
+
+    <div class="icons">
+        <label for="toggler" class="fas fa-bars"></label>
+        <button type="button" class="log-out-btn" id="loginBtn">Login</button>
+    </div>
+</header>
+
+<!-- ═══════════════════════════ VIEW 1: HOME ═══════════════════════════ -->
+<div class="app-view active" id="view-home">
+
+    <section class="home" id="home">
+        <div class="content">
+            <h1 class="hero-title">Kanto Sweets</h1>
+            <h2 class="hero-welcome" id="welcomeName">Welcome</h2>
+
+            <div class="hero-logo">
+                <img src="images/newcake.png" alt="Kanto Sweets Logo">
+            </div>
+
+            <button type="button" class="btn browse-btn" id="shopNowBtn">Browse</button>
+        </div>
+    </section>
+
+    <section class="about" id="about">
+        <h1 class="heading"><span>About</span> us </h1>
+        <div class="video-container">
+            <video src="images/dalocalvid.mp4" loop autoplay muted playsinline></video>
+        </div>
+        <p class="description">KANTO SWEETS is a platform that connects customers with local sellers, offering a wide range of products from various shops. We aim to support local businesses and provide customers with unique, locally-made items.</p>
+    </section>
+
+</div>
+
+<!-- ═══════════════════════════ VIEW 2: SELLER STORES ═══════════════════════════ -->
+<div class="app-view" id="view-seller">
+
+    <h2>SELLER STORES</h2>
+
+    <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Search shops or products..." oninput="filterStores()">
+    </div>
+
+    <div class="store-list" id="storeList">
+        <p class="loading-msg">Loading stores...</p>
+    </div>
+    <p class="no-results" id="noResults" style="display:none;">No shops or products found.</p>
+
+</div>
+
+<!-- ═══════════════════════════ VIEW 3: SHOP (product view) ═══════════════════════════ -->
+<div class="app-view" id="view-shop">
+
+    <div id="loadingOverlay"><div class="spinner"></div><span id="loadingMsg">Loading store...</span></div>
+
+    <div class="banner" id="banner">
+        <div class="banner-bg" id="bannerBg"></div>
+        <div class="banner-overlay"></div>
+        <img class="banner-logo" id="storeLogo" src="" alt="Store Logo">
+        <div class="banner-info">
+            <h1 id="storeName">Loading...</h1>
+            <p id="storeMotto"></p>
+        </div>
+    </div>
+
+    <div class="menu-section">
+        <h2>Menu</h2>
+        <h3 class="top-label">Top Products:</h3>
+        <div class="product-grid" id="productGrid"><p class="empty">Loading products...</p></div>
+    </div>
+
+    <div id="shopCarouselSection" style="margin:0 0 16px;display:none;">
+        <div class="shop-carousel-wrap" id="shopCarouselWrap">
+            <div class="shop-carousel-track" id="shopCarouselTrack"></div>
+            <button class="shop-carousel-btn prev" id="shopPrevBtn">&#8249;</button>
+            <button class="shop-carousel-btn next" id="shopNextBtn">&#8250;</button>
+        </div>
+        <div class="shop-carousel-dots" id="shopCarouselDots"></div>
+    </div>
+
+    <div class="shop-location-card" id="shopLocationCard" style="display:none;">
+        <div class="shop-location-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Store Location
+        </div>
+        <p class="shop-location-text" id="shopLocationText"></p>
+        <iframe class="shop-map-frame" id="shopMapFrame" allowfullscreen loading="lazy" style="display:none;"></iframe>
+    </div>
+
+    <div class="shop-info-card">
+        <p><strong>Owner:</strong> <span id="infoOwner">—</span></p>
+        <p><strong>Contact Number:</strong> <span id="infoPhone">—</span></p>
+        <p><strong>GCash Number:</strong> <span id="infoGcash">—</span></p>
+        <p><strong>About the Shop:</strong> <span id="infoAbout">—</span></p>
+        <p><strong>Social Media:</strong>
+            <a id="infoFacebook" href="#" target="_blank"></a>
+            <a id="infoInstagram" href="#" target="_blank" style="margin-left:8px;"></a>
+        </p>
+    </div>
+
+    <div class="reviews-section" id="reviewsSection">
+        <div class="reviews-header">
+            <div class="reviews-header-left">
+                <div class="reviews-avg-block">
+                    <div class="reviews-avg-score" id="revAvgScore">—</div>
+                    <div class="reviews-avg-right">
+                        <div class="reviews-stars-row" id="revAvgStars"></div>
+                        <div class="reviews-count-label" id="revTotalLabel">No reviews yet</div>
+                    </div>
+                </div>
+            </div>
+            <div class="reviews-title">⭐ Ratings &amp; Reviews</div>
+        </div>
+
+        <div class="reviews-filter-row">
+            <button class="rev-chip active" onclick="filterReviews('all', this)">All</button>
+            <button class="rev-chip" onclick="filterReviews('5', this)">5 Stars ⭐</button>
+            <button class="rev-chip" onclick="filterReviews('4', this)">4 Stars</button>
+            <button class="rev-chip" onclick="filterReviews('low', this)">1–3 Stars ⚠️</button>
+        </div>
+
+        <div class="reviews-list" id="reviewsList">
+            <div class="reviews-empty">
+                <span class="reviews-empty-icon">⭐</span>
+                Loading reviews…
+            </div>
+        </div>
+
+        <button class="reviews-load-more" id="revLoadMoreBtn" style="display:none;" onclick="loadMoreReviews()">
+            Show more reviews ▾
+        </button>
+    </div>
+
+    <!-- ORDER MODAL -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-sheet" id="modalSheet">
+            <button class="back-btn" id="modalBackBtn" style="position:absolute;top:14px;left:18px;z-index:2;padding:4px 12px;font-size:0.8rem;">&#8592; Back</button>
+            <button class="modal-close" id="modalCloseBtn">&#10005;</button>
+            <div class="modal-product">
+                <img id="modalImg" src="" alt="">
+                <div class="modal-product-info">
+                    <h4 id="modalName"></h4>
+                    <p id="modalPrice"></p>
+                </div>
+            </div>
+            <div class="size-label" id="sizeLabel" style="display:none;">Select Size</div>
+            <div class="size-options" id="sizeOptions" style="display:none;">
+                <button class="size-btn selected">Small</button>
+                <button class="size-btn">Medium</button>
+                <button class="size-btn">Large</button>
+            </div>
+            <div class="qty-label">Quantity</div>
+            <div class="qty-row">
+            <button class="qty-btn" id="qtyMinus">−</button>
+            <input type="number" class="qty-num" id="qtyNum" value="1" min="1" max="9999">
+            <button class="qty-btn" id="qtyPlus">+</button>
+            </div>
+            <div class="stock-hint" id="stockHint"></div>
+            <div id="reserveSection" style="display:none;">
+                <div class="date-label">Reservation Date</div>
+                <input type="date" class="date-input" id="reserveDate">
+                <div class="payment-label">Payment Method</div>
+                <div class="payment-options">
+                    <label class="payment-option selected" id="payGcashOpt">
+                        <input type="radio" name="paymentMethod" value="gcash" checked>
+                        <span class="payment-icon">📱</span>
+                        <div class="payment-info">
+                            <div class="payment-name">GCash</div>
+                            <div class="payment-desc">Upload your payment screenshot</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="gcash-section show" id="gcashSection">
+                    <div class="gcash-number">GCash Number: <span id="shopGcash">—</span></div>
+                    <label class="gcash-upload-label">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Upload GCash Screenshot
+                        <input type="file" id="gcashUpload" accept="image/*" style="display:none;">
+                    </label>
+                    <img id="gcashPreview" class="gcash-preview" src="" alt="GCash screenshot">
+                </div>
+            </div>
+            <button class="modal-action-btn cart-confirm" id="modalActionBtn">Add to Cart</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- STOCK ALERT MODAL -->
+    <div class="stock-alert-overlay" id="stockAlertOverlay">
+        <div class="stock-alert-card" id="stockAlertCard">
+            <div class="stock-alert-icon" id="stockAlertIcon">⚠️</div>
+            <h3 id="stockAlertTitle">Limited Stock</h3>
+            <p id="stockAlertMsg"></p>
+            <button class="stock-alert-btn" id="stockAlertBtn">Okay, Got It</button>
+        </div>
+    </div>
+
+    <!-- REQUIREMENT ALERT MODAL -->
+    <div class="stock-alert-overlay" id="reqAlertOverlay">
+        <div class="stock-alert-card" id="reqAlertCard" style="border-color:rgba(91,200,245,0.35);">
+            <div class="stock-alert-icon" id="reqAlertIcon">📎</div>
+            <h3 id="reqAlertTitle">Almost there!</h3>
+            <p id="reqAlertMsg"></p>
+            <button class="stock-alert-btn" id="reqAlertBtn" style="background:linear-gradient(135deg,#1a4a8a,#4d9de0);">Got it</button>
+        </div>
+    </div>
+
+    <!-- LOGIN REQUIRED MODAL -->
+    <div class="stock-alert-overlay" id="loginRequiredOverlay">
+        <div class="stock-alert-card" id="loginRequiredCard" style="border-color:rgba(91,200,245,0.35);">
+            <div class="stock-alert-icon">🔒</div>
+            <h3>Login Required</h3>
+            <p>Please log in first before you can buy this product.</p>
+            <button class="stock-alert-btn" id="loginRequiredBtn" style="background:linear-gradient(135deg,#1a4a8a,#4d9de0);">Go to Login</button>
+        </div>
+    </div>
+
+</div>
+
+<script type="module" src="index.js"></script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap');
+
+/* ===== BODY ===== */
+body {
+    margin: 0;
+    font-family: 'Poppins', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    color: white;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* ===== BLURRED BACKGROUND IMAGE ===== */
+body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("images/cakeshopbg.png") no-repeat center center fixed;
+    background-size: cover;
+    filter: blur(8px) brightness(0.35) saturate(0.6);
+    z-index: 0;
+}
+
+/* Dark luxury overlay */
+body::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, rgba(10,5,5,0.85) 0%, rgba(40,10,10,0.75) 100%);
+    z-index: 1;
+}
+
+/* Keep content above overlay */
+.header,
+.welcome,
+.logo,
+.buttons {
+    position: relative;
+    z-index: 2;
+}
+
+/* ===== HEADER ===== */
+.header {
+    width: 100%;
+    background: rgba(5, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    text-align: center;
+    padding: 20px 20px;
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(24px, 6vw, 50px);
+    font-weight: 900;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    background-image: linear-gradient(90deg, #888888, #cccccc, #ffffff, #800000, #cccccc, #888888);
+    background-size: 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+   
+    border-bottom: 2px solid rgba(128, 0, 0, 0.5);
+}
+
+/* ===== WELCOME ===== */
+.welcome {
+    margin-top: 20px;
+    font-size: clamp(34px, 9vw, 62px);
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: 3px;
+    text-align: center;
+    padding: 0 20px;
+    background-image: linear-gradient(90deg, #888888, #cccccc, #ffffff, #800000, #cccccc, #888888);
+    background-size: 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+}
+
+/* Shine animation */
+@keyframes shineText {
+    0% { background-position: 0%; }
+    100% { background-position: 300%; }
+}
+
+/* ===== LOGO ===== */
+.logo {
+    margin: 25px 0;
+    animation: floatLogo 4s ease-in-out infinite;
+    padding: 0 20px;
+}
+
+.logo img {
+    width: clamp(140px, 40vw, 220px);
+    animation: glowPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes floatLogo {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+    100% { transform: translateY(0px); }
+}
+
+@keyframes glowPulse {
+    0% {
+        filter: drop-shadow(0 0 6px rgba(184, 134, 11, 0.7))
+                drop-shadow(0 0 12px rgba(255, 200, 0, 0.4));
+    }
+    100% {
+        filter: drop-shadow(0 0 22px rgba(255, 215, 0, 1))
+                drop-shadow(0 0 45px rgba(184, 134, 11, 0.8));
+    }
+}
+
+/* ===== BUTTONS ===== */
+.buttons {
+    display: flex;
+    gap: clamp(20px, 6vw, 60px);
+    margin-top: 20px;
+    padding: 0 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn {
+    width: clamp(140px, 40vw, 210px);
+    height: clamp(50px, 10vw, 65px);
+    border: none;
+    border-radius: 4px;
+    background: linear-gradient(270deg, #1a1a1a, #3a0000, #800000, #3a0000, #1a1a1a);
+    background-size: 400% 400%;
+    color: #dddddd;
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(14px, 3.5vw, 19px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    box-shadow: 0 4px 20px rgba(128, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+    text-transform: uppercase;
+    border: 1px solid rgba(128, 0, 0, 0.5);
+}
+
+.btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(128, 0, 0, 0.7),
+                0 0 20px rgba(180, 0, 0, 0.4);
+    border-color: rgba(200, 0, 0, 0.9);
+}
+
+.btn:active {
+    transform: scale(0.96);
+}
+
+@keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 480px) {
+    .header {
+        letter-spacing: 3px;
+        padding: 15px 10px;
+    }
+
+    .buttons {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .btn {
+        width: 80%;
+        max-width: 280px;
+    }
+}

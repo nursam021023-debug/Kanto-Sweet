@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reservations</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f4f6f9;
+            color: #2d2d2d;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin: 16px 20px 0;
+            background: none; border: none;
+            color: #5a7fc1; font-size: 14px; font-weight: 600;
+            cursor: pointer; padding: 6px 10px; border-radius: 8px;
+            transition: background .15s;
+        }
+        .back-btn:hover { background: #e8eef8; }
+        .page-header { padding: 10px 24px 6px; }
+        .page-title { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+        .page-sub { font-size: 13px; color: #777; margin-top: 2px; }
+
+        .order-list { padding: 14px 20px; display: flex; flex-direction: column; gap: 14px; }
+        .empty {
+            color: #aaa; text-align: center; padding: 60px 0; font-size: 15px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .empty-icon { font-size: 40px; }
+        .order-card {
+            background: #fff; border-radius: 14px;
+            border: 1px solid #e4e9f4;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            overflow: hidden;
+            animation: fadeUp .25s ease both;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .order-card.status-pending         { border-left: 4px solid #f5c842; }
+        .order-card.status-reserved        { border-left: 4px solid #f39c12; }
+        .order-card.status-to-ship         { border-left: 4px solid #17a2b8; }
+        .order-card.status-to-receive      { border-left: 4px solid #007bff; }
+        .order-card.status-delivered       { border-left: 4px solid #28a745; }
+
+        .order-card-top {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px 8px; border-bottom: 1px solid #f0f2f8;
+        }
+        .order-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .reserve-type-badge {
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+            background: #fff3e0; color: #b05e00;
+        }
+        .status-badge {
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+        }
+        .order-date { font-size: 11px; color: #aaa; white-space: nowrap; }
+        .order-body { display: flex; gap: 12px; padding: 12px 16px 12px; }
+        .order-img {
+            width: 70px; height: 70px; object-fit: cover;
+            border-radius: 10px; border: 1px solid #eee; flex-shrink: 0;
+            background: #f4f4f4;
+        }
+        .order-info { flex: 1; min-width: 0; }
+        .order-name { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+        .order-detail { font-size: 12px; color: #666; margin-top: 3px; }
+        .order-price { color: #2a7d4f; font-weight: 700; }
+        .order-seller {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; color: #888; margin-top: 5px;
+        }
+        .status-notice {
+            margin: 0 16px 14px; padding: 10px 14px;
+            border-radius: 10px; font-size: 12px;
+            display: flex; align-items: flex-start; gap: 8px;
+        }
+        .status-notice .sn-icon { font-size: 16px; flex-shrink: 0; }
+        .status-notice strong { display: block; font-size: 13px; margin-bottom: 2px; }
+        .notice-pending         { background: #fffbea; border: 1px solid #f5d478; color: #7d5a00; }
+        .notice-reserved        { background: #fff3e0; border: 1px solid #f5c680; color: #7d3c00; }
+        .notice-to-ship         { background: #e8f7fb; border: 1px solid #9eddea; color: #0c5460; }
+        .notice-to-receive      { background: #e8f0fe; border: 1px solid #9ecfff; color: #004085; }
+        .notice-delivered       { background: #d0f0e8; border: 1px solid #7dd8bc; color: #0a5940; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%;
+            transform: translateX(-50%) translateY(60px);
+            background: #1a1a2e; color: #fff; padding: 11px 24px;
+            border-radius: 30px; font-size: 13px; font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2);
+            transition: transform .3s ease, opacity .3s ease;
+            opacity: 0; z-index: 1000;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .loading-msg {
+            text-align: center; color: #aaa; padding: 40px 0; font-size: 14px;
+        }
+
+        .card-actions {
+            padding: 0 16px 14px; display: flex; justify-content: flex-end;
+        }
+        .receipt-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 18px; border-radius: 20px;
+            background: #eef2ff; color: #3a5fcf;
+            border: 1.5px solid #cdd9f7;
+            font-size: 12px; font-weight: 700;
+            font-family: inherit; cursor: pointer;
+            transition: background .15s, transform .1s;
+        }
+        .receipt-btn:hover  { background: #dfe7fc; }
+        .receipt-btn:active { transform: scale(.97); }
+
+        .img-modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.65); z-index: 1050;
+            align-items: center; justify-content: center; padding: 16px;
+        }
+        .img-modal-overlay.open { display: flex; }
+        .img-modal-box {
+            background: #fff; border-radius: 16px; padding: 0;
+            max-width: 640px; width: 92vw; max-height: 90vh;
+            overflow: hidden; overflow-y: auto;
+            display: flex; flex-direction: column; align-items: center;
+            position: relative; color: #2d2d2d;
+        }
+        .img-modal-close {
+            position: absolute; top: 16px; right: 18px;
+            background: none; border: none; font-size: 24px;
+            cursor: pointer; color: #888; z-index: 2;
+        }
+        .rc-item-row {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            font-weight: 700; margin-bottom: 12px; gap: 12px;
+        }
+        .rc-item-row .rc-item-left { max-width: 380px; }
+        .rc-item-row .rc-item-sub { font-size: 14px; color: #888; font-weight: 400; margin-top: 2px; }
+
+        @media print {
+            @page { size: auto; margin: 0; }
+            html, body { height: 0; overflow: hidden; }
+            body * { visibility: hidden; }
+            #receiptPrintArea, #receiptPrintArea * { visibility: visible; }
+            #receiptPrintArea {
+                position: fixed; inset: 0; margin: 0;
+                width: 100%; max-width: 100%; max-height: none;
+                box-shadow: none; border-radius: 0;
+            }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+
+    <div class="page-header">
+        <h1 class="page-title">📅 My Reservations</h1>
+        <p class="page-sub" id="customerLabel">—</p>
+    </div>
+
+    <div class="order-list" id="orderList">
+        <p class="loading-msg">Loading reservations...</p>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- Reservation Receipt Modal (printable) -->
+    <div class="img-modal-overlay" id="receiptModalOverlay" onclick="closeReceiptModal(event)">
+        <div class="img-modal-box" id="receiptPrintArea" onclick="event.stopPropagation()">
+            <button class="img-modal-close no-print" onclick="closeReceiptModal()">&#10005;</button>
+            <div style="padding:44px 24px 32px; font-family:'Segoe UI',sans-serif; width:100%;">
+                <div style="text-align:center; margin-bottom:26px;">
+                    <div style="font-size:32px; font-weight:800; color:#1a1a2e;">KANTO SWEETS</div>
+                    <div style="font-size:17px; color:#888;">Reservation Receipt</div>
+                </div>
+                <div style="border-top:2px dashed #ccc; border-bottom:2px dashed #ccc; padding:20px 0; margin-bottom:20px; font-size:19px; color:#444;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>Receipt No.</span><strong id="rcNo">—</strong></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>Date Requested</span><strong id="rcDate">—</strong></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Status</span><strong id="rcStatus">—</strong></div>
+                </div>
+                <div style="font-size:19px; color:#444; margin-bottom:20px;">
+                    <div style="margin-bottom:10px;"><strong>Seller:</strong> <span id="rcSeller">—</span></div>
+                    <div style="margin-bottom:10px;"><strong>Customer:</strong> <span id="rcCustomer">—</span></div>
+                    <div id="rcReserveDateRow" style="margin-bottom:10px;"><strong>📅 Reserve Date:</strong> <span id="rcReserveDate">—</span></div>
+                </div>
+                <div style="border-top:2px dashed #ccc; padding-top:18px; margin-bottom:8px; font-size:19px; color:#333;">
+                    <div class="rc-item-row">
+                        <div class="rc-item-left">
+                            <span id="rcItemName">—</span>
+                            <div class="rc-item-sub" id="rcItemSub">—</div>
+                        </div>
+                        <span id="rcItemPrice">₱0</span>
+                    </div>
+                </div>
+                <div style="border-top:2px dashed #ccc; padding-top:18px; font-size:19px;" id="rcRefRow">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>Reference No.</span><strong id="rcRef">—</strong></div>
+                </div>
+                <div style="border-top:2px dashed #ccc; padding-top:18px; font-size:19px;">
+                    <div style="display:flex; justify-content:space-between; font-size:26px; font-weight:800; color:#1a1a2e;"><span>Total</span><span id="rcTotal">₱0</span></div>
+                </div>
+                <div style="text-align:center; font-size:15px; color:#aaa; margin-top:26px;">
+                    Thank you for your reservation!<br>Keep this receipt for your reference.
+                </div>
+                <button class="no-print" onclick="window.print()" style="width:100%; margin-top:26px; padding:16px; border:none; border-radius:10px; background:#1a1a2e; color:#fff; font-weight:700; font-size:18px; cursor:pointer;">🖨️ Print receipt</button>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    const currentCustomer = localStorage.getItem("currentCustomer");
+    const currentUID      = localStorage.getItem("currentCustomerUID") || "";
+
+    if (!currentCustomer) {
+        alert("Please login as customer first.");
+        window.location.href = "login.html";
+    }
+
+    document.getElementById("customerLabel").innerText = "Hello, " + currentCustomer + " 👋";
+
+    let _reservations = [];
+
+    // Cancelled / rejected = hindi na dito lalabas; nasa cancelled-rejected page na sila.
+    function isCancelledOrRejected(o) {
+        return o.status === "cancelled" ||
+               o.status === "rejected"  ||
+               o.sellerRejectedReservation === true;
+    }
+
+    async function loadReservations() {
+        try {
+            const { getOrdersByCustomer } = await import("./db.js");
+            const all = await getOrdersByCustomer(currentUID);
+            _reservations = all.filter(o =>
+                (o.type === "reservation" || o.reserveDate || o.date) &&
+                !isCancelledOrRejected(o)
+            );
+        } catch(e) {
+            console.error("Failed to load reservations:", e);
+            _reservations = [];
+        }
+        renderList();
+    }
+
+    function renderList() {
+        const list = [..._reservations].sort((a, b) => {
+            return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+        });
+
+        const container = document.getElementById("orderList");
+        container.innerHTML = "";
+
+        if (list.length === 0) {
+            container.innerHTML = `
+                <div class="empty">
+                    <div class="empty-icon">📅</div>
+                    <div>No reservations yet.</div>
+                </div>`;
+            return;
+        }
+
+        list.forEach(reservation => {
+            const displayKey = reservation.status || "pending";
+            const info = getStatusInfo(displayKey);
+
+            const rawDate = reservation.createdAt?.seconds
+                ? new Date(reservation.createdAt.seconds * 1000)
+                : reservation.createdAt ? new Date(reservation.createdAt) : null;
+            const displayDate = rawDate
+                ? rawDate.toLocaleDateString("en-PH", {
+                    year: "numeric", month: "short", day: "numeric"
+                  })
+                : "—";
+
+            const card = document.createElement("div");
+            card.classList.add("order-card", "status-" + displayKey);
+
+            card.innerHTML = `
+                <div class="order-card-top">
+                    <div class="order-meta">
+                        <span class="reserve-type-badge">📅 Reservation</span>
+                        <span class="status-badge"
+                              style="background:${info.bg}; color:${info.color};">
+                            ${info.icon} ${info.label}
+                        </span>
+                    </div>
+                    <span class="order-date">${displayDate}</span>
+                </div>
+
+                <div class="order-body">
+                    <img class="order-img"
+                         src="${reservation.image || ''}"
+                         alt="${reservation.name || ''}"
+                         onerror="this.style.display='none'">
+                    <div class="order-info">
+                        <h3 class="order-name">${reservation.name || 'Item'}</h3>
+                        <p class="order-detail">
+                            Size: <strong>${reservation.size || '—'}</strong>
+                            &nbsp;|&nbsp;
+                            Qty: <strong>${reservation.qty || 1}</strong>
+                        </p>
+                        <p class="order-detail">
+                            Price: <strong class="order-price">
+                                ₱${(parseFloat(reservation.price || 0) * (reservation.qty || 1)).toFixed(0)}
+                            </strong>
+                        </p>
+                        ${reservation.reserveDate || reservation.date ? `
+                        <p class="order-detail">
+                            📅 Reserve Date:
+                            <strong>${reservation.reserveDate || reservation.date}</strong>
+                        </p>` : ''}
+                        ${reservation.referenceNum ? `
+                        <p class="order-detail">
+                            Ref #: <strong>${reservation.referenceNum}</strong>
+                        </p>` : ''}
+                        <p class="order-seller">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9 22 9 12 15 12 15 22"/>
+                            </svg>
+                            ${reservation.sellerUsername || reservation.seller || '—'}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="status-notice notice-${displayKey}">
+                    <div class="sn-icon">${info.icon}</div>
+                    <div style="flex:1;">
+                        <strong>${info.noticeTitle}</strong>
+                        ${info.noticeMsg}
+                    </div>
+                </div>
+
+                <div class="card-actions">
+                    <button class="receipt-btn" data-id="${reservation.id}">🧾 View Receipt</button>
+                </div>
+            `;
+
+            card.querySelector(".receipt-btn").addEventListener("click", () => viewReceipt(reservation.id));
+
+            container.appendChild(card);
+        });
+    }
+
+    // ── Receipt modal ───────────────────────────────────────────────────────
+    window.viewReceipt = function(reservationId) {
+        const reservation = _reservations.find(r => r.id === reservationId);
+        if (!reservation) return;
+
+        const info = getStatusInfo(reservation.status || "pending");
+
+        const rawDate = reservation.createdAt?.seconds
+            ? new Date(reservation.createdAt.seconds * 1000)
+            : reservation.createdAt ? new Date(reservation.createdAt) : new Date();
+        const dateDisplay = rawDate.toLocaleDateString("en-PH", { year:"numeric", month:"short", day:"numeric" })
+            + " " + rawDate.toLocaleTimeString("en-PH", { hour:"2-digit", minute:"2-digit" });
+
+        const qty   = reservation.qty || 1;
+        const total = (parseFloat(reservation.price || 0) * qty).toFixed(0);
+
+        document.getElementById("rcNo").textContent      = "#" + (reservation.receiptNo || String(reservation.id).slice(-8).toUpperCase());
+        document.getElementById("rcDate").textContent    = dateDisplay;
+        document.getElementById("rcStatus").textContent = info.icon + " " + info.label;
+        document.getElementById("rcSeller").textContent  = reservation.sellerUsername || reservation.seller || "—";
+        document.getElementById("rcCustomer").textContent = currentCustomer;
+
+        const reserveDateRow = document.getElementById("rcReserveDateRow");
+        const reserveDate    = reservation.reserveDate || reservation.date;
+        if (reserveDate) {
+            document.getElementById("rcReserveDate").textContent = reserveDate;
+            reserveDateRow.style.display = "";
+        } else {
+            reserveDateRow.style.display = "none";
+        }
+
+        document.getElementById("rcItemName").textContent  = reservation.name || "Item";
+        document.getElementById("rcItemSub").textContent   = `Size: ${reservation.size || '—'}  |  Qty: ${qty}`;
+        document.getElementById("rcItemPrice").textContent = "₱" + total;
+
+        const refRow = document.getElementById("rcRefRow");
+        if (reservation.referenceNum) {
+            document.getElementById("rcRef").textContent = reservation.referenceNum;
+            refRow.style.display = "";
+        } else {
+            refRow.style.display = "none";
+        }
+
+        document.getElementById("rcTotal").textContent = "₱" + total;
+
+        document.getElementById("receiptModalOverlay").classList.add("open");
+    };
+
+    window.closeReceiptModal = function(e) {
+        if (e) e.stopPropagation();
+        document.getElementById("receiptModalOverlay").classList.remove("open");
+    };
+
+    function getStatusInfo(status) {
+        const map = {
+            "pending": {
+                label: "Pending Approval", icon: "🕐",
+                bg: "#fff3cd", color: "#856404",
+                noticeTitle: "Waiting for Seller Approval",
+                noticeMsg: "Your reservation request has been sent. Please wait for the seller to approve it."
+            },
+            "reserved": {
+                label: "Reserved", icon: "📅",
+                bg: "#fde8d8", color: "#7d3c00",
+                noticeTitle: "Reservation Confirmed!",
+                noticeMsg: "Your reservation is confirmed. Please come on your reserved date."
+            },
+            "to-ship": {
+                label: "To Ship", icon: "📦",
+                bg: "#d1ecf1", color: "#0c5460",
+                noticeTitle: "Being Prepared",
+                noticeMsg: "The seller is preparing your order for shipment."
+            },
+            "to-receive": {
+                label: "To Receive", icon: "🚚",
+                bg: "#cce5ff", color: "#004085",
+                noticeTitle: "On the Way!",
+                noticeMsg: "Your order is on its way. Please wait for delivery."
+            },
+            "delivered": {
+                label: "Delivered", icon: "✅",
+                bg: "#d0f0e8", color: "#0a5940",
+                noticeTitle: "Delivered!",
+                noticeMsg: "Your order has been delivered. Thank you!"
+            },
+        };
+        return map[status] || {
+            label: status, icon: "❓",
+            bg: "#e2e3e5", color: "#383d41",
+            noticeTitle: "Unknown Status",
+            noticeMsg: ""
+        };
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById("toast");
+        toast.innerText = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 3000);
+    }
+
+    window.goBack = function() { window.location.href = "customer-profile.html"; };
+
+    await loadReservations();
+</script>
+</body>
+</html>
